@@ -1,0 +1,15 @@
+# Ignore built extension outputs
+dist/
+
+# Ignore temporary/editor files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE metadata
+.vscode/
+.idea/
+
+# Ignore logs and temp files
+*.log
+*.tmp
+*.bak
