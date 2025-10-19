@@ -13,6 +13,11 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+*.pyc
 
-# Ignore testing 
-Testing/
+# Ignore Python virtual environments
+.venv/
+venv/
+
+# Ignore manual testing artifacts
+Testing/*.png
