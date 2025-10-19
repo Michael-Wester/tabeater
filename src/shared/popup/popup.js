@@ -1,4 +1,4 @@
-// Popup: Recommended toggle persists; theme + pill react to storage; no deprecated settings left.
+// Popup: Suggestions react to settings changes; theme + pill react to storage; no deprecated settings left.
 
 (function () {
   const $ = (s) => document.querySelector(s);
@@ -21,6 +21,28 @@
     showTabsEatenInHeader: true,
   };
 
+  let lastClosedTabs = [];
+  let statusToken = 0;
+
+  function setStatus(text, delay = 1400) {
+    const el = $("#pc-status");
+    if (!el) return;
+    el.textContent = text || "";
+    statusToken += 1;
+    const token = statusToken;
+    if (delay > 0) {
+      setTimeout(() => {
+        if (statusToken === token) el.textContent = "";
+      }, delay);
+    }
+  }
+
+  function updateUndoButton() {
+    const btn = $("#pc-undo-close");
+    if (!btn) return;
+    btn.disabled = !lastClosedTabs.length;
+  }
+
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme || "auto");
   }
@@ -31,26 +53,22 @@
     );
     return { ...DEFAULTS, ...(raw[STORAGE_KEY] || {}) };
   }
-  async function writeSettings(patch) {
-    const cur = await readSettings();
-    const next = { ...cur, ...(patch || {}) };
-    await new Promise((r) =>
-      chrome.storage.local.set({ [STORAGE_KEY]: next }, r)
-    );
-    return next;
-  }
-
   function updateSuggestedVisibility(enabled) {
     const card = $("#pc-suggest-card");
+    if (!card) return;
     card.hidden = !enabled;
+    card.style.display = enabled ? "" : "none";
     if (!enabled) {
       $("#pc-suggest-tags").innerHTML = "";
-      $("#pc-suggest-empty").textContent = "Turn on recommended to see ideas.";
+      $("#pc-suggest-empty").textContent =
+        "Recommendations disabled. Enable them in Settings to see ideas.";
       $("#pc-suggest-caption").textContent = "";
+      return;
     }
+    $("#pc-suggest-caption").textContent = "Tap a tag to close matching tabs.";
   }
 
-  // Live reaction to option changes (theme/tabs-eaten visibility) or popup toggle (enableSuggestions)
+  // Live reaction to option changes (theme/tabs-eaten visibility/suggestions)
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     const next = changes[STORAGE_KEY]?.newValue;
@@ -58,7 +76,6 @@
     const s = { ...DEFAULTS, ...next };
     applyTheme(s.theme);
     $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
-    $("#pc-toggle-recommended").checked = !!s.enableSuggestions;
     updateSuggestedVisibility(!!s.enableSuggestions);
     if (s.enableSuggestions) {
       renderSuggestions();
@@ -69,11 +86,11 @@
     const s = await readSettings();
     applyTheme(s.theme);
     $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
-    $("#pc-toggle-recommended").checked = !!s.enableSuggestions;
     updateSuggestedVisibility(!!s.enableSuggestions);
     if (s.enableSuggestions) {
       $("#pc-suggest-caption").textContent = "Tap a tag to close matching tabs.";
     }
+    updateUndoButton();
   }
 
   // tabs-eaten pill (persistent via background stats)
@@ -88,10 +105,18 @@
     $("#pc-close").disabled = true;
     try {
       const out = await msg("pc:closeByKeyword", { query });
-      $("#pc-status").textContent = out?.ok
-        ? `Closed ${out.closedCount}`
-        : "Failed";
-      setTimeout(() => ($("#pc-status").textContent = ""), 1400);
+      if (out?.ok) {
+        setStatus(`Closed ${out.closedCount}`);
+        const closed = Array.isArray(out.closedTabs) ? out.closedTabs : [];
+        if (closed.length) {
+          lastClosedTabs = closed;
+        } else if (out.closedCount > 0) {
+          lastClosedTabs = [];
+        }
+        updateUndoButton();
+      } else {
+        setStatus("Failed");
+      }
       await renderStatsPill();
       await renderSuggestions();
     } finally {
@@ -101,13 +126,58 @@
 
   async function runCloseInactive() {
     const out = await msg("pc:closeInactive");
-    $("#pc-status").textContent =
-      out?.ok && out.closedCount
-        ? `Closed ${out.closedCount} inactive`
-        : "No inactive tabs";
-    setTimeout(() => ($("#pc-status").textContent = ""), 1400);
+    if (out?.ok && out.closedCount) {
+      setStatus(`Closed ${out.closedCount} inactive`);
+      const closed = Array.isArray(out.closedTabs) ? out.closedTabs : [];
+      if (closed.length) {
+        lastClosedTabs = closed;
+      } else {
+        lastClosedTabs = [];
+      }
+      updateUndoButton();
+    } else if (out?.ok) {
+      setStatus("No inactive tabs", 1200);
+    } else {
+      setStatus("Failed");
+    }
     await renderStatsPill();
     await renderSuggestions();
+  }
+
+  async function undoLastClose() {
+    if (!lastClosedTabs.length) {
+      setStatus("Nothing to undo", 1200);
+      return;
+    }
+    const undoBtn = $("#pc-undo-close");
+    if (undoBtn) undoBtn.disabled = true;
+
+    let restored = 0;
+    try {
+      const out = await msg("pc:restoreTabs", { tabs: lastClosedTabs });
+      if (!out?.ok) {
+        setStatus("Undo failed");
+        return;
+      }
+      restored = out.restoredCount || 0;
+      if (restored) {
+        setStatus(`Restored ${restored}`);
+        lastClosedTabs = [];
+      } else {
+        setStatus("Nothing to restore", 1200);
+      }
+    } catch (err) {
+      console.error("Undo failed", err);
+      setStatus("Undo failed");
+      return;
+    } finally {
+      updateUndoButton();
+    }
+
+    if (restored) {
+      await renderStatsPill();
+      await renderSuggestions();
+    }
   }
 
   async function closeActiveDomain() {
@@ -119,8 +189,7 @@
       domain = new URL(tabs[0]?.url || "").hostname.replace(/^www\./, "");
     } catch {}
     if (!domain) {
-      $("#pc-status").textContent = "No active domain";
-      setTimeout(() => ($("#pc-status").textContent = ""), 1200);
+      setStatus("No active domain", 1200);
       return;
     }
     await runClose(domain);
@@ -202,15 +271,7 @@
       }
     });
     $("#pc-close-active-domain").addEventListener("click", closeActiveDomain);
-
-    // Toggle Recommended (persist)
-    $("#pc-toggle-recommended").addEventListener("change", async (e) => {
-      const next = await writeSettings({
-        enableSuggestions: !!e.target.checked,
-      });
-      updateSuggestedVisibility(next.enableSuggestions);
-      if (next.enableSuggestions) renderSuggestions();
-    });
+    $("#pc-undo-close").addEventListener("click", undoLastClose);
 
     // Open Options
     $("#pc-open-settings").addEventListener("click", () => {
@@ -226,3 +287,4 @@
     await renderSuggestions();
   });
 })();
+

@@ -121,8 +121,8 @@
         gap: 6px;
       }
       .tags {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
       }
       .tag {
@@ -137,6 +137,8 @@
         cursor: pointer;
         font-size: 13px;
         transition: background 0.15s ease, border-color 0.15s ease;
+        width: 100%;
+        justify-content: space-between;
       }
       .tag:hover {
         border-color: var(--accent);
@@ -187,11 +189,9 @@
         <button id="pc-close-active-domain" class="btn">
           Close active domain
         </button>
-        <div class="spacer"></div>
-        <label class="switch">
-          <input id="pc-toggle-recommended" type="checkbox" />
-          <span>Recommended</span>
-        </label>
+        <button id="pc-undo-close" class="btn" disabled title="Undo last close">
+          Undo
+        </button>
       </div>
     </section>
 

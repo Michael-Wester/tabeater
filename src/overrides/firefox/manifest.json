@@ -5,7 +5,7 @@
   "description": "Clear your tab list quickly and keep your browser tidy.",
   "author": "Your Name",
   "homepage_url": "https://github.com/<your-username>/tabeater",
-  "permissions": ["tabs", "storage"],
+  "permissions": ["tabs", "storage", "contextMenus"],
   "background": { "scripts": ["background.js", "background.suggestions.js"] },
   "browser_action": {
     "default_title": "Feed TabEater",
