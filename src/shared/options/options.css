@@ -93,3 +93,44 @@ select {
 .muted {
   color: var(--muted);
 }
+.small {
+  font-size: 12px;
+}
+.btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn.danger {
+  border-color: transparent;
+  background: #ef4444;
+  color: #fff;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.stats {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+.stats-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.stats-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}

@@ -9,9 +9,13 @@
 
   const DEFAULTS = {
     enableSuggestions: true,
+    enableInactiveSuggestion: true,
+    inactiveThresholdMinutes: 30,
     suggestMinOpenTabsPerDomain: 3,
     decayDays: 14,
     maxHistory: 200,
+    trackHistory: true,
+    trackStats: true,
     theme: "auto",
     showTabsEatenInHeader: true,
   };
@@ -41,8 +45,10 @@
 
   async function pcRecordClosedTabs(urlsOrDomains) {
     const got = await getStore([KEYS.HISTORY, KEYS.SETTINGS]);
-    const hist = got[KEYS.HISTORY] || [];
     const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
+    if (!cfg.trackHistory) return;
+
+    const hist = cfg.trackHistory ? got[KEYS.HISTORY] || [] : [];
 
     const byDomain = new Map(hist.map((x) => [x.domain, x]));
     const at = now();
@@ -66,10 +72,10 @@
 
   async function pcGetSuggestions() {
     const got = await getStore([KEYS.HISTORY, KEYS.SETTINGS]);
-    const hist = got[KEYS.HISTORY] || [];
     const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
     if (!cfg.enableSuggestions) return [];
 
+    const hist = cfg.trackHistory ? got[KEYS.HISTORY] || [] : [];
     const decayMs = cfg.decayDays * 86400000;
     const nowTs = now();
 
@@ -80,6 +86,25 @@
       const d = domainFromUrl(t.url);
       if (!d) continue;
       openByDomain.set(d, (openByDomain.get(d) || 0) + 1);
+    }
+
+    const thresholdMinutes = Math.max(
+      1,
+      Number(cfg.inactiveThresholdMinutes) || 30
+    );
+    const thresholdMs = thresholdMinutes * 60000;
+
+    let inactiveCount = 0;
+    if (cfg.enableInactiveSuggestion) {
+      const inactiveTabs = tabs.filter((t) => {
+        if (t.incognito) return false;
+        if (t.pinned || t.audible) return false;
+        if (t.active) return false;
+        const last = t.lastAccessed || 0;
+        if (last) return nowTs - last >= thresholdMs;
+        return t.discarded === true;
+      });
+      inactiveCount = inactiveTabs.length;
     }
 
     const scored = [];
@@ -100,7 +125,24 @@
       });
     }
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 10);
+
+    const top = scored.slice(0, 10).map((item) => ({
+      kind: "domain",
+      domain: item.domain,
+      openCount: item.openCount,
+      freq: item.freq,
+      lastClosedAt: item.lastClosedAt,
+    }));
+
+    const suggestions = [];
+    if (inactiveCount) {
+      suggestions.push({
+        kind: "inactive",
+        inactiveCount,
+      });
+    }
+    suggestions.push(...top);
+    return suggestions;
   }
 
   async function getStats() {
@@ -120,7 +162,10 @@
   }
   async function pcStatsEat({ count = 0, domains = [] } = {}) {
     if (!count) return;
-    const got = await getStore([KEYS.STATS]);
+    const got = await getStore([KEYS.STATS, KEYS.SETTINGS]);
+    const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
+    if (!cfg.trackStats) return;
+
     const s = got[KEYS.STATS] || {
       totalTabsEaten: 0,
       byDomain: [],

@@ -10,9 +10,13 @@
   const STORAGE_KEY = "pc.settings";
   const DEFAULTS = {
     enableSuggestions: true,
+    enableInactiveSuggestion: true,
+    inactiveThresholdMinutes: 30,
     suggestMinOpenTabsPerDomain: 3,
     decayDays: 14,
     maxHistory: 200,
+    trackHistory: true,
+    trackStats: true,
     theme: "auto",
     showTabsEatenInHeader: true,
   };
@@ -36,6 +40,16 @@
     return next;
   }
 
+  function updateSuggestedVisibility(enabled) {
+    const card = $("#pc-suggest-card");
+    card.hidden = !enabled;
+    if (!enabled) {
+      $("#pc-suggest-tags").innerHTML = "";
+      $("#pc-suggest-empty").textContent = "Turn on recommended to see ideas.";
+      $("#pc-suggest-caption").textContent = "";
+    }
+  }
+
   // Live reaction to option changes (theme/tabs-eaten visibility) or popup toggle (enableSuggestions)
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
@@ -45,8 +59,10 @@
     applyTheme(s.theme);
     $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
     $("#pc-toggle-recommended").checked = !!s.enableSuggestions;
-    $("#pc-suggest-card").hidden = !s.enableSuggestions;
-    if (s.enableSuggestions) renderSuggestions();
+    updateSuggestedVisibility(!!s.enableSuggestions);
+    if (s.enableSuggestions) {
+      renderSuggestions();
+    }
   });
 
   async function initUI() {
@@ -54,7 +70,10 @@
     applyTheme(s.theme);
     $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
     $("#pc-toggle-recommended").checked = !!s.enableSuggestions;
-    $("#pc-suggest-card").hidden = !s.enableSuggestions;
+    updateSuggestedVisibility(!!s.enableSuggestions);
+    if (s.enableSuggestions) {
+      $("#pc-suggest-caption").textContent = "Tap a tag to close matching tabs.";
+    }
   }
 
   // tabs-eaten pill (persistent via background stats)
@@ -80,6 +99,17 @@
     }
   }
 
+  async function runCloseInactive() {
+    const out = await msg("pc:closeInactive");
+    $("#pc-status").textContent =
+      out?.ok && out.closedCount
+        ? `Closed ${out.closedCount} inactive`
+        : "No inactive tabs";
+    setTimeout(() => ($("#pc-status").textContent = ""), 1400);
+    await renderStatsPill();
+    await renderSuggestions();
+  }
+
   async function closeActiveDomain() {
     const tabs = await new Promise((res) =>
       chrome.tabs.query({ active: true, currentWindow: true }, res)
@@ -96,64 +126,69 @@
     await runClose(domain);
   }
 
-  function renderSuggestionRow(s) {
-    const row = document.createElement("div");
-    row.className = "sugg-row";
-    row.innerHTML = `
-      <input type="checkbox" class="sugg-check" data-domain="${s.domain}">
-      <div style="font-weight:600">${s.domain}</div>
-      <div class="spacer"></div>
-      <span class="small muted">${s.openCount} open</span>
-      <button class="btn small" data-domain="${s.domain}">Close</button>
-    `;
-    row.querySelector("button").addEventListener("click", async (e) => {
-      const d = e.currentTarget.getAttribute("data-domain");
-      await runClose(d);
-    });
-    return row;
+  function renderSuggestionTag(item) {
+    const tag = document.createElement("button");
+    tag.type = "button";
+    tag.className = "tag";
+
+    if (item.kind === "inactive") {
+      tag.dataset.kind = "inactive";
+      tag.innerHTML = `
+        <span>Inactive</span>
+        <span class="count">${item.inactiveCount}</span>
+      `;
+      tag.addEventListener("click", async () => {
+        tag.disabled = true;
+        try {
+          await runCloseInactive();
+        } finally {
+          tag.disabled = false;
+        }
+      });
+    } else {
+      tag.dataset.domain = item.domain;
+      tag.innerHTML = `
+        <span>${item.domain}</span>
+        <span class="count">${item.openCount} open</span>
+      `;
+      tag.addEventListener("click", async () => {
+        tag.disabled = true;
+        try {
+          await runClose(item.domain);
+        } finally {
+          tag.disabled = false;
+        }
+      });
+    }
+
+    return tag;
   }
 
   async function renderSuggestions() {
-    if ($("#pc-suggest-card").hidden) return;
-    const list = $("#pc-suggest-list");
-    const btn = $("#pc-suggest-close");
-    const hint = $("#pc-suggest-hint");
-    list.textContent = "Loading…";
+    const card = $("#pc-suggest-card");
+    if (card.hidden) return;
+
+    const tagsWrap = $("#pc-suggest-tags");
+    const empty = $("#pc-suggest-empty");
+    const caption = $("#pc-suggest-caption");
+
+    empty.textContent = "Loading...";
+    caption.textContent = "";
+    tagsWrap.innerHTML = "";
+
     const { ok, suggestions = [] } = await msg("pc:getSuggestions");
-    list.innerHTML = "";
     if (!ok) {
-      list.textContent = "Error";
-      btn.disabled = true;
-      hint.textContent = "";
+      empty.textContent = "Couldn't load recommendations.";
       return;
     }
     if (!suggestions.length) {
-      list.textContent = "No suggestions";
-      btn.disabled = true;
-      hint.textContent = "";
+      empty.textContent = "No recommendations right now.";
       return;
     }
-    suggestions.forEach((s) => list.appendChild(renderSuggestionRow(s)));
-    const update = () => {
-      btn.disabled = list.querySelectorAll(".sugg-check:checked").length === 0;
-      hint.textContent = "";
-    };
-    list.addEventListener("change", update, { once: true });
-    update();
-  }
 
-  async function closeSelectedSuggestions() {
-    const list = $("#pc-suggest-list");
-    const checks = Array.from(list.querySelectorAll(".sugg-check:checked"));
-    if (!checks.length) return;
-    $("#pc-suggest-close").disabled = true;
-    try {
-      for (const c of checks) {
-        await runClose(c.getAttribute("data-domain"));
-      }
-    } finally {
-      $("#pc-suggest-close").disabled = false;
-    }
+    empty.textContent = "";
+    caption.textContent = "Tap a tag to close matching tabs.";
+    suggestions.forEach((item) => tagsWrap.appendChild(renderSuggestionTag(item)));
   }
 
   function wireUI() {
@@ -167,14 +202,13 @@
       }
     });
     $("#pc-close-active-domain").addEventListener("click", closeActiveDomain);
-    $("#pc-suggest-close").addEventListener("click", closeSelectedSuggestions);
 
     // Toggle Recommended (persist)
     $("#pc-toggle-recommended").addEventListener("change", async (e) => {
       const next = await writeSettings({
         enableSuggestions: !!e.target.checked,
       });
-      $("#pc-suggest-card").hidden = !next.enableSuggestions;
+      updateSuggestedVisibility(next.enableSuggestions);
       if (next.enableSuggestions) renderSuggestions();
     });
 
