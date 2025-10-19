@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "TabEater",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Clear your tab list quickly and keep your browser tidy.",
   "author": "Your Name",
   "homepage_url": "https://github.com/<your-username>/tabeater",
