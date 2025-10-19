@@ -122,11 +122,11 @@
       }
       .tags {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 8px;
       }
       .tag {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 6px;
         border-radius: 999px;
@@ -139,10 +139,21 @@
         transition: background 0.15s ease, border-color 0.15s ease;
         width: 100%;
         justify-content: space-between;
+        min-width: 0;
       }
       .tag:hover {
         border-color: var(--accent);
         background: rgba(167, 139, 250, 0.1);
+      }
+      .tag .label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        flex: 1;
+      }
+      .tag .count {
+        flex-shrink: 0;
       }
       .tag .count {
         font-size: 12px;
@@ -180,7 +191,7 @@
           id="pc-query"
           class="input"
           type="text"
-          placeholder="Close by domain or keyword (press Enter)"
+          placeholder="Close by keyword (press Enter)"
         />
         <button id="pc-close" class="btn primary">Close</button>
       </div>

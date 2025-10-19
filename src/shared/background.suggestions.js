@@ -10,8 +10,8 @@
   const DEFAULTS = {
     enableSuggestions: true,
     enableInactiveSuggestion: true,
-    inactiveThresholdMinutes: 30,
-    suggestMinOpenTabsPerDomain: 3,
+    inactiveThresholdMinutes: 60,
+    suggestMinOpenTabsPerDomain: 1,
     decayDays: 14,
     maxHistory: 200,
     trackHistory: true,

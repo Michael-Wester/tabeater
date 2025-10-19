@@ -203,7 +203,7 @@
     if (item.kind === "inactive") {
       tag.dataset.kind = "inactive";
       tag.innerHTML = `
-        <span>Inactive</span>
+        <span class="label">Inactive</span>
         <span class="count">${item.inactiveCount}</span>
       `;
       tag.addEventListener("click", async () => {
@@ -217,7 +217,7 @@
     } else {
       tag.dataset.domain = item.domain;
       tag.innerHTML = `
-        <span>${item.domain}</span>
+        <span class="label">${item.domain}</span>
         <span class="count">${item.openCount} open</span>
       `;
       tag.addEventListener("click", async () => {

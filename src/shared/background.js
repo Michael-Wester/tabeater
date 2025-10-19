@@ -13,9 +13,7 @@ const DEFAULTS = {
   showTabsEatenInHeader: true,
 };
 
-const CONTEXT_MENU_IDS = {
-  CLOSE_ACTIVE_DOMAIN: "pc.closeActiveDomain",
-};
+const CONTEXT_MENU_TITLE = "Close all tabs from this domain";
 
 // In MV3 service workers we must pull in helper script manually.
 if (
@@ -64,38 +62,144 @@ function serializeTab(tab) {
   };
   return out;
 }
-function setupContextMenus() {
-  if (typeof chrome === "undefined") return;
-  const menus = chrome.contextMenus;
-  if (!menus || typeof menus.removeAll !== "function") return;
-  menus.removeAll(() => {
-    const removeErr = chrome.runtime.lastError;
-    if (removeErr && removeErr.message) {
-      console.warn("TabEater: removeAll context menus", removeErr);
-    }
-    menus.create(
-      {
-        id: CONTEXT_MENU_IDS.CLOSE_ACTIVE_DOMAIN,
-        title: "Close active domain",
-        contexts: ["page"],
-      },
-      () => {
-        const err = chrome.runtime.lastError;
-        if (err && err.message)
-          console.warn("TabEater: context menu create failed", err);
-      }
-    );
-  });
+function getRuntimeLastError() {
+  if (
+    typeof chrome !== "undefined" &&
+    chrome.runtime &&
+    chrome.runtime.lastError
+  ) {
+    return chrome.runtime.lastError;
+  }
+  if (
+    typeof browser !== "undefined" &&
+    browser.runtime &&
+    browser.runtime.lastError
+  ) {
+    return browser.runtime.lastError;
+  }
+  return null;
 }
-
-async function closeActiveDomainFromContext(tab, info) {
-  const url = tab?.url || info?.pageUrl || "";
-  const domain = domainFromUrl(url);
+async function handleContextMenuClick(info, tab) {
+  let url =
+    tab?.url ||
+    info?.pageUrl ||
+    info?.frameUrl ||
+    info?.linkUrl ||
+    info?.srcUrl ||
+    "";
+  if (!url) {
+    try {
+      const activeTabs = await tabsQuery({ active: true, currentWindow: true });
+      url = activeTabs[0]?.url || "";
+    } catch (err) {
+      console.warn(
+        "TabEater: unable to resolve active tab for context menu",
+        err
+      );
+    }
+  }
+  let domain = null;
+  try {
+    domain = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {}
   if (!domain) return;
   try {
     await closeByKeyword(domain);
   } catch (err) {
-    console.error("TabEater: closeActiveDomain (context)", err);
+    console.error("TabEater: context menu action failed", err);
+  }
+}
+
+function installContextMenu() {
+  const menus =
+    (typeof chrome !== "undefined" && chrome.contextMenus) ||
+    (typeof browser !== "undefined" && (browser.contextMenus || browser.menus));
+  if (!menus || typeof menus.create !== "function") return;
+
+  const createEntry = (contexts) => {
+    try {
+      const maybePromise = menus.create(
+        {
+          title: CONTEXT_MENU_TITLE,
+          contexts,
+          onclick: handleContextMenuClick,
+        },
+        () => {
+          const err = getRuntimeLastError();
+          if (err && err.message) {
+            console.warn(
+              `TabEater: context menu create failed (contexts: ${contexts.join(
+                ","
+              )})`,
+              err
+            );
+          }
+        }
+      );
+      if (maybePromise && typeof maybePromise.then === "function") {
+        maybePromise.catch((err) => {
+          if (err) {
+            console.warn(
+              `TabEater: context menu create promise failed (contexts: ${contexts.join(
+                ","
+              )})`,
+              err
+            );
+          }
+        });
+      }
+    } catch (err) {
+      console.warn(
+        `TabEater: context menu create threw (contexts: ${contexts.join(
+          ","
+        )})`,
+        err
+      );
+    }
+  };
+
+  const contextsToAdd = [["page", "frame"]];
+  if (chrome?.action) contextsToAdd.push(["action"]);
+  if (chrome?.browserAction) contextsToAdd.push(["browser_action"]);
+  if (typeof browser !== "undefined" && browser.browserAction) {
+    contextsToAdd.push(["browser_action"]);
+  }
+
+  const runCreate = () => {
+    const seen = new Set();
+    contextsToAdd.forEach((ctx) => {
+      const key = ctx.join(",");
+      if (seen.has(key)) return;
+      seen.add(key);
+      createEntry(ctx);
+    });
+  };
+
+  if (typeof menus.removeAll === "function") {
+    try {
+      const maybePromise = menus.removeAll();
+      if (maybePromise && typeof maybePromise.then === "function") {
+        maybePromise
+          .catch((err) => {
+            if (err)
+              console.warn("TabEater: context menu removeAll failed", err);
+          })
+          .finally(runCreate);
+      } else {
+        menus.removeAll(() => {
+          const err = getRuntimeLastError();
+          if (err && err.message) {
+            console.warn("TabEater: context menu removeAll failed", err);
+          }
+          runCreate();
+        });
+      }
+    } catch (err) {
+      console.warn("TabEater: context menu removeAll threw", err);
+      runCreate();
+    }
+  } else {
+    runCreate();
   }
 }
 
@@ -348,21 +452,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return undefined;
 });
 
-if (chrome?.runtime?.onInstalled) {
-  chrome.runtime.onInstalled.addListener(() => {
-    setupContextMenus();
-  });
+const runtimeApi =
+  (typeof chrome !== "undefined" && chrome.runtime) ||
+  (typeof browser !== "undefined" && browser.runtime) ||
+  null;
+if (runtimeApi?.onInstalled) {
+  runtimeApi.onInstalled.addListener(installContextMenu);
 }
-if (chrome?.runtime?.onStartup) {
-  chrome.runtime.onStartup.addListener(() => {
-    setupContextMenus();
-  });
+if (runtimeApi?.onStartup) {
+  runtimeApi.onStartup.addListener(installContextMenu);
 }
-setupContextMenus();
-if (chrome?.contextMenus?.onClicked) {
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === CONTEXT_MENU_IDS.CLOSE_ACTIVE_DOMAIN) {
-      closeActiveDomainFromContext(tab, info);
-    }
-  });
-}
+installContextMenu();
