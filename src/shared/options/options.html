@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TabEater Settings</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="row between">
+        <h1>TabEater — Settings</h1>
+        <a id="back-to-popup" class="link" href="#">Open popup</a>
+      </header>
+
+      <section class="card">
+        <h2>General</h2>
+        <div class="grid">
+          <label class="row gap">
+            <span>Min open tabs per domain</span>
+            <input
+              id="min-open"
+              type="number"
+              min="1"
+              value="3"
+              class="number"
+            />
+          </label>
+
+          <label class="row gap">
+            <span>Theme</span>
+            <select id="theme">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Popup</h2>
+        <div class="grid">
+          <label class="row gap">
+            <input id="show-tabs-eaten" type="checkbox" checked />
+            <span>Show “tabs closed” counter in header</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>About</h2>
+        <p>Settings are stored locally in your browser.</p>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

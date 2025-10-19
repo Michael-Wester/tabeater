@@ -1,61 +1,65 @@
-# 👾 TabEater
+# TabEater
 
-**TabEater** is your friendly browser monster that _eats tabs for breakfast_.  
-Feed it your messy, overgrown browser and watch it chomp your way back to focus.
-
-> 🧠 Less clutter. More power. One chomp at a time.
+Minimal browser extension for taming runaway tab collections.
 
 ---
 
-## ✨ Features
+## Features
 
-- 🍽 **Eat Tabs Instantly**  
-  Close tabs by keyword, domain, or with one big “Chomp” button.
-
-- 🧠 **Smart Recommendations**  
-  TabEater suggests which tabs to “feed” it next, based on your recent activity.
-
-- 🌗 **Dark / Light Mode**  
-  Adapts to your system theme, or choose manually in settings.
-
-- ⚙️ **Monster Settings**  
-  Toggle suggestions, tweak thresholds, and choose how your monster behaves.
-
-- 🐉 **Eat Entire Domains**  
-  One click to “Eat all tabs from this domain.”
-
-- 📊 **Tab Stats**  
-  Track how many tabs you’ve fed your monster — and see your top “meals.”
-
-- 🪄 **Persistent Settings**  
-  Remembers your preferences, theme, and monster’s appetite across sessions.
+- Close matching tabs by keyword, domain, or in bulk
+- Get suggestions for the next tabs to archive
+- Switch between dark and light themes per browser
+- Track how many tabs you clear over time
 
 ---
 
-## 🧩 Screenshots
+## Build
 
-| Dark Mode                                          | Light Mode                                           | Stats                                           |
-| -------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| ![dark mode screenshot](docs/screenshots/dark.png) | ![light mode screenshot](docs/screenshots/light.png) | ![stats screenshot](docs/screenshots/stats.png) |
+PowerShell script (no Node required):
 
-_(Add screenshots later inside `/docs/screenshots/`)_
+```powershell
+.\build.ps1             # build all browsers (firefox, chrome, edge)
+.\build.ps1 firefox     # build a single target
+```
+
+Node 18+ workflow (optional for CI/other devs):
+
+```bash
+node build.js           # build all browsers
+node build.js firefox   # build a single target
+```
+
+Artifacts are written to `dist/<browser>/`.
 
 ---
 
-## ⚙️ Installation (Developer Build)
+## Project Layout
 
-### 🦊 Firefox
+```
+src/
+  shared/                # all common scripts, UI, and assets
+  overrides/
+    chrome/              # manifest + files that differ for Chrome
+    edge/                # manifest + files that differ for Edge
+    firefox/             # manifest + files that differ for Firefox
+```
 
-1. Go to `about:debugging#/runtime/this-firefox`
-2. Click **“Load Temporary Add-on…”**
-3. Select the `manifest.json` file inside your `dist/firefox/` folder
-4. Click the TabEater 🧟‍♂️ icon on your toolbar and start chomping!
+Override folders are copied on top of the shared build output so each browser only diverges where it needs to.
 
-### 🧭 Chrome / Chromium
+---
+
+## Install (temporary/dev build)
+
+**Firefox**
+
+1. Visit `about:debugging#/runtime/this-firefox`
+2. Choose **Load Temporary Add-on**
+3. Select `dist/firefox/manifest.json`
+
+**Chrome / Chromium**
 
 1. Open `chrome://extensions`
-2. Enable **Developer Mode**
-3. Click **“Load unpacked”**
-4. Select your `dist/chrome/` (or equivalent build) folder
+2. Enable **Developer mode**
+3. Choose **Load unpacked** and pick `dist/chrome/`
 
----
+Add screenshots to `docs/screenshots/` to populate the extension gallery later.

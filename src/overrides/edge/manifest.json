@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "TabEater",
+  "version": "1.0.0",
+  "description": "Clear your tab list quickly and keep your browser tidy.",
+  "author": "Your Name",
+  "homepage_url": "https://github.com/<your-username>/tabeater",
+  "permissions": ["tabs", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Feed TabEater",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  }
+}
