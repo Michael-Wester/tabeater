@@ -13,3 +13,6 @@ Thumbs.db
 *.log
 *.tmp
 *.bak
+
+# Ignore testing 
+Testing/
