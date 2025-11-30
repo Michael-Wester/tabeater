@@ -55,6 +55,22 @@
         align-items: center;
         gap: 8px;
       }
+      .header-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .header-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
       .stack {
         display: grid;
         gap: 10px;
@@ -260,20 +276,23 @@
   <body class="stack">
     <!-- Header -->
     <section class="card stack">
-      <div class="row">
-        <button
-          id="pc-settings-toggle"
-          class="btn small settings-toggle"
-          aria-pressed="false"
-          aria-controls="pc-tab-settings"
-          type="button"
-        >
-          Settings
-        </button>
-        <img src="../icons/icon16.png" class="icon" alt="" />
-        <strong>TabEater</strong>
-        <div class="spacer"></div>
-        <span id="pc-count-pill" class="pill"></span>
+      <div class="header-row">
+        <div class="header-main">
+          <img src="../icons/icon16.png" class="icon" alt="" />
+          <strong>TabEater</strong>
+        </div>
+        <div class="header-actions">
+          <span id="pc-count-pill" class="pill"></span>
+          <button
+            id="pc-settings-toggle"
+            class="btn small settings-toggle"
+            aria-pressed="false"
+            aria-controls="pc-tab-settings"
+            type="button"
+          >
+            Settings
+          </button>
+        </div>
       </div>
       <div class="muted small">
         Close noisy tabs fast. Type a keyword or tap a quick action.

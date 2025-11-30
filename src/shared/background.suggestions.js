@@ -58,6 +58,7 @@
       Number(cfg.inactiveThresholdMinutes) || 30
     );
     const thresholdMs = thresholdMinutes * 60000;
+    const nowTs = now();
 
     let inactiveCount = 0;
     if (cfg.enableInactiveSuggestion) {

@@ -103,9 +103,9 @@
       if (typeof after === "function") after(next);
     };
     el.addEventListener("change", handler);
-    el.addEventListener("input", handler);
   }
 
+  let suggestionsRequestToken = 0;
   function updateSuggestedVisibility(enabled) {
     const card = $("#pc-suggest-card");
     if (!card) return;
@@ -324,6 +324,7 @@
   }
 
   async function renderSuggestions() {
+    const token = ++suggestionsRequestToken;
     const card = $("#pc-suggest-card");
     if (!card || card.hidden) return;
 
@@ -337,6 +338,7 @@
     tagsWrap.textContent = "";
 
     const { ok, suggestions = [] } = await msg("pc:getSuggestions");
+    if (token !== suggestionsRequestToken) return;
     if (!ok) {
       empty.textContent = "Couldn't load recommendations.";
       return;
