@@ -112,8 +112,16 @@
     const body = byId("pc-quick-body");
     const control = byId("show-quick");
     const visible = !!show;
-    if (card) card.hidden = !visible;
-    if (body) body.hidden = !visible;
+    if (card) {
+      card.hidden = !visible;
+      card.style.display = visible ? "" : "none";
+      card.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+    if (body) {
+      body.hidden = !visible;
+      body.style.display = visible ? "" : "none";
+      body.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
     if (control) control.checked = visible;
   }
 
