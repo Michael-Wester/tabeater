@@ -85,6 +85,18 @@
         color: #fff;
         border-color: transparent;
       }
+      .btn.settings-toggle {
+        padding: 4px 10px;
+        background: transparent;
+        color: var(--muted);
+        transition: background 0.15s ease, color 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .btn.settings-toggle.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
       .btn:disabled {
         opacity: 0.5;
         cursor: default;
@@ -120,6 +132,29 @@
         align-items: center;
         gap: 6px;
       }
+      .tab-panel[hidden] {
+        display: none;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .gap {
+        gap: 8px;
+      }
+      .number,
+      select {
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        width: 120px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 16px;
+      }
       .tags {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -141,6 +176,20 @@
         justify-content: space-between;
         min-width: 0;
       }
+      .tag-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
+      }
+      .tag .favicon {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        background: var(--border);
+      }
       .tag:hover {
         border-color: var(--accent);
         background: rgba(167, 139, 250, 0.1);
@@ -159,52 +208,183 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .btn.danger {
+        border-color: transparent;
+        background: #ef4444;
+        color: #fff;
+      }
+      .stats {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .row.between {
+        justify-content: space-between;
+      }
+      .stats-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 6px;
+      }
+      .stats-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+      }
     </style>
   </head>
   <body class="stack">
     <!-- Header -->
-    <section class="card row">
-      <img src="../icons/icon16.png" class="icon" alt="" />
-      <strong>TabEater</strong>
-      <div class="spacer"></div>
-      <span id="pc-count-pill" class="pill"></span>
-      <button id="pc-open-settings" class="btn small" title="Settings">
-        Settings
-      </button>
-    </section>
-
-    <!-- Recommended -->
-    <section id="pc-suggest-card" class="card stack" hidden>
-      <div class="row">
-        <strong>Recommended</strong>
-        <div class="spacer"></div>
-        <span id="pc-suggest-caption" class="small muted"></span>
-      </div>
-      <div id="pc-suggest-tags" class="tags"></div>
-      <div id="pc-suggest-empty" class="small muted"></div>
-    </section>
-
-    <!-- Quick Close -->
     <section class="card stack">
       <div class="row">
-        <input
-          id="pc-query"
-          class="input"
-          type="text"
-          placeholder="Close by keyword (press Enter)"
-        />
-        <button id="pc-close" class="btn primary">Close</button>
-      </div>
-      <div id="pc-status" class="small muted" aria-live="polite"></div>
-      <div class="row small">
-        <button id="pc-close-active-domain" class="btn">
-          Close active domain
+        <button
+          id="pc-settings-toggle"
+          class="btn small settings-toggle"
+          aria-pressed="false"
+          aria-controls="pc-tab-settings"
+          type="button"
+        >
+          Settings
         </button>
-        <button id="pc-undo-close" class="btn" disabled title="Undo last close">
-          Undo
-        </button>
+        <img src="../icons/icon16.png" class="icon" alt="" />
+        <strong>TabEater</strong>
+        <div class="spacer"></div>
+        <span id="pc-count-pill" class="pill"></span>
       </div>
     </section>
+
+    <div
+      id="pc-tab-actions"
+      class="tab-panel stack"
+      role="tabpanel"
+      aria-hidden="false"
+    >
+      <!-- Recommended -->
+      <section id="pc-suggest-card" class="card stack" hidden>
+        <div class="row">
+          <strong>Recommended</strong>
+          <div class="spacer"></div>
+          <span id="pc-suggest-caption" class="small muted"></span>
+        </div>
+        <div id="pc-suggest-tags" class="tags"></div>
+        <div id="pc-suggest-empty" class="small muted"></div>
+      </section>
+
+      <!-- Quick Close -->
+      <section class="card stack">
+        <div class="row">
+          <input
+            id="pc-query"
+            class="input"
+            type="text"
+            placeholder="Close by keyword (press Enter)"
+          />
+          <button id="pc-close" class="btn primary">Close</button>
+        </div>
+        <div id="pc-status" class="small muted" aria-live="polite"></div>
+        <div class="row small">
+          <button id="pc-close-active-domain" class="btn">
+            Close active domain
+          </button>
+          <button
+            id="pc-undo-close"
+            class="btn"
+            disabled
+            title="Undo last close"
+          >
+            Undo
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div
+      id="pc-tab-settings"
+      class="tab-panel stack"
+      role="tabpanel"
+      hidden
+      aria-hidden="true"
+    >
+      <section class="card stack">
+        <h2>General</h2>
+        <div class="grid">
+          <label class="row gap">
+            <span>Theme</span>
+            <select id="theme">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+
+          <label class="row gap">
+            <span>Min open tabs per domain</span>
+            <input
+              id="min-open"
+              type="number"
+              min="1"
+              value="3"
+              class="number"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="card stack">
+        <h2>Recommendations</h2>
+        <div class="grid">
+          <label class="row gap">
+            <input id="enable-suggestions" type="checkbox" checked />
+            <span>Enable recommended actions</span>
+          </label>
+
+          <label class="row gap">
+            <input id="enable-inactive" type="checkbox" checked />
+            <span>Show an "Inactive" tag for idle tabs</span>
+          </label>
+
+          <label class="row gap">
+            <span>Consider tabs inactive after</span>
+            <input
+              id="inactive-threshold"
+              type="number"
+              min="1"
+              value="30"
+              class="number"
+            />
+            <span>minutes</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card stack">
+        <h2>Stats &amp; Tracking</h2>
+        <div class="grid">
+          <label class="row gap">
+            <input id="track-history" type="checkbox" checked />
+            <span>Track website history for better recommendations</span>
+          </label>
+        </div>
+
+        <div class="stats">
+          <div class="row between stats-meta">
+            <div>
+              <strong>Total tabs closed:</strong>
+              <span id="stats-total">0</span>
+            </div>
+            <button id="stats-reset" class="btn danger">Reset stats</button>
+          </div>
+          <div id="stats-note" class="muted small"></div>
+          <ul id="stats-domains" class="stats-list"></ul>
+        </div>
+      </section>
+
+    </div>
 
     <script src="popup.js"></script>
   </body>
