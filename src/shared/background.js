@@ -8,9 +8,7 @@ const DEFAULTS = {
   decayDays: 14,
   maxHistory: 200,
   trackHistory: true,
-  trackStats: true,
   theme: "auto",
-  showTabsEatenInHeader: true,
 };
 
 const CONTEXT_MENU_TITLE = "Close all tabs from this domain";

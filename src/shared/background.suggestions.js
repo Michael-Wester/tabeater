@@ -15,9 +15,7 @@
     decayDays: 14,
     maxHistory: 200,
     trackHistory: true,
-    trackStats: true,
     theme: "auto",
-    showTabsEatenInHeader: true,
   };
 
   const now = () => Date.now();
@@ -162,9 +160,7 @@
   }
   async function pcStatsEat({ count = 0, domains = [] } = {}) {
     if (!count) return;
-    const got = await getStore([KEYS.STATS, KEYS.SETTINGS]);
-    const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
-    if (!cfg.trackStats) return;
+    const got = await getStore([KEYS.STATS]);
 
     const s = got[KEYS.STATS] || {
       totalTabsEaten: 0,
