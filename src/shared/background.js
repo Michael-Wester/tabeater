@@ -7,6 +7,7 @@ const DEFAULTS = {
   suggestMinOpenTabsPerDomain: 3,
   decayDays: 14,
   maxHistory: 200,
+  showQuickActions: true,
   theme: "auto",
 };
 

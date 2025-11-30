@@ -312,9 +312,6 @@
           </button>
         </div>
       </div>
-      <div class="muted small">
-        Close noisy tabs fast. Type a keyword or tap a quick action.
-      </div>
     </section>
 
     <div
@@ -335,38 +332,42 @@
       </section>
 
       <!-- Quick Close -->
-      <section class="card stack">
-        <div class="stack tight">
-          <strong>Close tabs fast</strong>
-          <span class="small muted">
-            Search by keyword or use a quick action below.
-          </span>
+      <section class="card stack" id="pc-quick-card">
+        <div class="row between">
+          <div class="stack tight">
+            <strong>Close tabs fast</strong>
+            <span class="small muted">
+              Search by keyword or tap a quick action.
+            </span>
+          </div>
         </div>
-        <div class="row wrap">
-          <input
-            id="pc-query"
-            class="input"
-            type="text"
-            placeholder="Close by keyword (press Enter)"
-          />
-          <button id="pc-close" class="btn primary">Close</button>
-        </div>
-        <div id="pc-status" class="status small" aria-live="polite"></div>
-        <div class="row wrap small">
-          <button id="pc-close-active-domain" class="btn ghost">
-            Close active domain
-          </button>
-          <button id="pc-close-inactive" class="btn ghost">
-            Close inactive
-          </button>
-          <button
-            id="pc-undo-close"
-            class="btn ghost"
-            disabled
-            title="Undo last close"
-          >
-            Undo
-          </button>
+        <div id="pc-quick-body" class="stack">
+          <div class="row wrap">
+            <input
+              id="pc-query"
+              class="input"
+              type="text"
+              placeholder="Close by keyword (press Enter)"
+            />
+            <button id="pc-close" class="btn primary">Close</button>
+          </div>
+          <div id="pc-status" class="status small" aria-live="polite"></div>
+          <div class="row wrap small">
+            <button id="pc-close-active-domain" class="btn ghost">
+              Close active domain
+            </button>
+            <button id="pc-close-inactive" class="btn ghost">
+              Close inactive
+            </button>
+            <button
+              id="pc-undo-close"
+              class="btn ghost"
+              disabled
+              title="Undo last close"
+            >
+              Undo
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -388,6 +389,11 @@
               <option value="light">Light</option>
               <option value="dark">Dark</option>
             </select>
+          </label>
+
+          <label class="row gap">
+            <input id="show-quick" type="checkbox" checked />
+            <span>Show "Close tabs fast" section</span>
           </label>
 
           <label class="row gap">

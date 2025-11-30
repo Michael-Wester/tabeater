@@ -16,6 +16,7 @@
     suggestMinOpenTabsPerDomain: 3,
     decayDays: 14,
     maxHistory: 200,
+    showQuickActions: true,
     theme: "auto",
   };
   const FAVICON_SERVICE = "https://icons.duckduckgo.com/ip3/";
@@ -93,6 +94,7 @@
       "inactive-threshold",
       (el) => (el.value = settings.inactiveThresholdMinutes)
     );
+    assign("show-quick", (el) => (el.checked = !!settings.showQuickActions));
   }
 
   function bindSettingControl(id, map, after) {
@@ -103,6 +105,16 @@
       if (typeof after === "function") after(next);
     };
     el.addEventListener("change", handler);
+  }
+
+  function toggleQuickVisibility(show) {
+    const card = byId("pc-quick-card");
+    const body = byId("pc-quick-body");
+    const control = byId("show-quick");
+    const visible = !!show;
+    if (card) card.hidden = !visible;
+    if (body) body.hidden = !visible;
+    if (control) control.checked = visible;
   }
 
   let suggestionsRequestToken = 0;
@@ -392,6 +404,11 @@
         renderSuggestions();
       }
     );
+    bindSettingControl(
+      "show-quick",
+      (el) => ({ showQuickActions: el.checked }),
+      (next) => toggleQuickVisibility(!!next.showQuickActions)
+    );
 
     const resetBtn = byId("stats-reset");
     if (resetBtn) {
@@ -458,6 +475,16 @@
     if (settingsToggle) {
       settingsToggle.addEventListener("click", () => toggleSettingsPanel());
     }
+    const quickToggle = byId("pc-toggle-quick");
+    const quickBody = byId("pc-quick-body");
+    if (quickToggle && quickBody) {
+      quickToggle.addEventListener("click", () => {
+        const hidden = quickBody.hidden === true;
+        quickBody.hidden = !hidden;
+        quickToggle.textContent = hidden ? "Hide" : "Show";
+        quickToggle.setAttribute("aria-pressed", hidden ? "true" : "false");
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -468,5 +495,7 @@
     await renderStatsPill();
     await renderSuggestions();
     await renderSettingsStats();
+    const initial = await readSettings();
+    toggleQuickVisibility(!!initial.showQuickActions);
   });
 })();
