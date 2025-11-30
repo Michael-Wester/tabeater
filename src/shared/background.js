@@ -7,7 +7,6 @@ const DEFAULTS = {
   suggestMinOpenTabsPerDomain: 3,
   decayDays: 14,
   maxHistory: 200,
-  trackHistory: true,
   theme: "auto",
 };
 
@@ -248,19 +247,10 @@ async function closeByKeyword(keyword) {
 
   if (toClose.length) {
     await tabsRemove(toClose);
-    const recordClosedTabs = root.pcRecordClosedTabs;
-    if (typeof recordClosedTabs === "function" && closedDomains.size) {
-      try {
-        await recordClosedTabs(Array.from(closedDomains));
-      } catch {}
-    }
     const statsEat = root.pcStatsEat;
     if (typeof statsEat === "function") {
       try {
-        await statsEat({
-          count: toClose.length,
-          domains: Array.from(closedDomains),
-        });
+        await statsEat({ count: toClose.length });
       } catch {}
     }
   }
@@ -304,19 +294,10 @@ async function closeInactiveTabs() {
 
   if (toClose.length) {
     await tabsRemove(toClose);
-    const recordClosedTabs = root.pcRecordClosedTabs;
-    if (typeof recordClosedTabs === "function" && closedDomains.size) {
-      try {
-        await recordClosedTabs(Array.from(closedDomains));
-      } catch {}
-    }
     const statsEat = root.pcStatsEat;
     if (typeof statsEat === "function") {
       try {
-        await statsEat({
-          count: toClose.length,
-          domains: Array.from(closedDomains),
-        });
+        await statsEat({ count: toClose.length });
       } catch {}
     }
   }

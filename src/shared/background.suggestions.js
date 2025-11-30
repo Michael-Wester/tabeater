@@ -2,7 +2,6 @@
   const root = typeof globalThis !== "undefined" ? globalThis : this;
 
   const KEYS = {
-    HISTORY: "pc.history",
     SETTINGS: "pc.settings",
     STATS: "pc.stats",
   };
@@ -14,7 +13,6 @@
     suggestMinOpenTabsPerDomain: 1,
     decayDays: 14,
     maxHistory: 200,
-    trackHistory: true,
     theme: "auto",
   };
 
@@ -41,41 +39,10 @@
     await setStore({ [KEYS.SETTINGS]: next });
   }
 
-  async function pcRecordClosedTabs(urlsOrDomains) {
-    const got = await getStore([KEYS.HISTORY, KEYS.SETTINGS]);
-    const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
-    if (!cfg.trackHistory) return;
-
-    const hist = cfg.trackHistory ? got[KEYS.HISTORY] || [] : [];
-
-    const byDomain = new Map(hist.map((x) => [x.domain, x]));
-    const at = now();
-    for (const item of urlsOrDomains) {
-      const d = item.includes(".") ? item : domainFromUrl(item);
-      const domain = (d || item || "").toLowerCase();
-      if (!domain) continue;
-      let row = byDomain.get(domain);
-      if (!row) {
-        row = { domain, count: 0, lastClosedAt: 0 };
-        byDomain.set(domain, row);
-      }
-      row.count += 1;
-      row.lastClosedAt = at;
-    }
-    const updated = Array.from(byDomain.values())
-      .sort((a, b) => b.lastClosedAt - a.lastClosedAt)
-      .slice(0, cfg.maxHistory);
-    await setStore({ [KEYS.HISTORY]: updated });
-  }
-
   async function pcGetSuggestions() {
-    const got = await getStore([KEYS.HISTORY, KEYS.SETTINGS]);
+    const got = await getStore([KEYS.SETTINGS]);
     const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
     if (!cfg.enableSuggestions) return [];
-
-    const hist = cfg.trackHistory ? got[KEYS.HISTORY] || [] : [];
-    const decayMs = cfg.decayDays * 86400000;
-    const nowTs = now();
 
     const tabs = await new Promise((res) => chrome.tabs.query({}, res));
     const openByDomain = new Map();
@@ -105,32 +72,15 @@
       inactiveCount = inactiveTabs.length;
     }
 
-    const scored = [];
-    for (const [domain, openCount] of openByDomain) {
-      if (openCount < cfg.suggestMinOpenTabsPerDomain) continue;
-      const h = hist.find((x) => x.domain === domain);
-      const recencyBoost = h
-        ? Math.exp(-(nowTs - h.lastClosedAt) / decayMs)
-        : 0.2;
-      const freq = h ? h.count : 1;
-      const score = openCount * (1 + freq * 0.5) * (0.5 + recencyBoost);
-      scored.push({
+    const domains = Array.from(openByDomain.entries())
+      .filter(([, openCount]) => openCount >= cfg.suggestMinOpenTabsPerDomain)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([domain, openCount]) => ({
+        kind: "domain",
         domain,
         openCount,
-        freq,
-        lastClosedAt: h?.lastClosedAt || 0,
-        score,
-      });
-    }
-    scored.sort((a, b) => b.score - a.score);
-
-    const top = scored.slice(0, 10).map((item) => ({
-      kind: "domain",
-      domain: item.domain,
-      openCount: item.openCount,
-      freq: item.freq,
-      lastClosedAt: item.lastClosedAt,
-    }));
+      }));
 
     const suggestions = [];
     if (inactiveCount) {
@@ -139,51 +89,36 @@
         inactiveCount,
       });
     }
-    suggestions.push(...top);
+    suggestions.push(...domains);
     return suggestions;
   }
 
   async function getStats() {
     const got = await getStore([KEYS.STATS]);
-    const s = got[KEYS.STATS] || {
+    return got[KEYS.STATS] || {
       totalTabsEaten: 0,
-      byDomain: [],
       startedAt: now(),
     };
-    s.byDomain.sort((a, b) => b.count - a.count);
-    return s;
   }
   async function resetStats() {
     await setStore({
-      [KEYS.STATS]: { totalTabsEaten: 0, byDomain: [], startedAt: now() },
+      [KEYS.STATS]: { totalTabsEaten: 0, startedAt: now() },
     });
   }
-  async function pcStatsEat({ count = 0, domains = [] } = {}) {
+  async function pcStatsEat({ count = 0 } = {}) {
     if (!count) return;
     const got = await getStore([KEYS.STATS]);
 
-    const s = got[KEYS.STATS] || {
-      totalTabsEaten: 0,
-      byDomain: [],
-      startedAt: now(),
-    };
+    const s =
+      got[KEYS.STATS] || {
+        totalTabsEaten: 0,
+        startedAt: now(),
+      };
     s.totalTabsEaten += count;
-    const map = new Map(s.byDomain.map((x) => [x.domain, x]));
-    for (const d of domains) {
-      const key = (d || "").toLowerCase();
-      if (!key) continue;
-      const row = map.get(key) || { domain: key, count: 0 };
-      row.count += count;
-      map.set(key, row);
-    }
-    s.byDomain = Array.from(map.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 100);
     await setStore({ [KEYS.STATS]: s });
   }
 
   // Expose hooks to background.js / service worker global scope.
-  root.pcRecordClosedTabs = pcRecordClosedTabs;
   root.pcStatsEat = pcStatsEat;
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

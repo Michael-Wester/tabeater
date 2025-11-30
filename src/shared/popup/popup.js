@@ -16,7 +16,6 @@
     suggestMinOpenTabsPerDomain: 3,
     decayDays: 14,
     maxHistory: 200,
-    trackHistory: true,
     theme: "auto",
   };
   const FAVICON_SERVICE = "https://icons.duckduckgo.com/ip3/";
@@ -94,7 +93,6 @@
       "inactive-threshold",
       (el) => (el.value = settings.inactiveThresholdMinutes)
     );
-    assign("track-history", (el) => (el.checked = !!settings.trackHistory));
   }
 
   function bindSettingControl(id, map, after) {
@@ -164,42 +162,15 @@
   async function renderSettingsStats() {
     const resetBtn = byId("stats-reset");
     const totalEl = byId("stats-total");
-    const listEl = byId("stats-domains");
     const noteEl = byId("stats-note");
-    if (!totalEl || !listEl || !noteEl) return;
+    if (!totalEl || !noteEl) return;
 
-    const settings = await readSettings();
     if (resetBtn) resetBtn.disabled = false;
     const { stats } = (await msg("pc:getStats")) || {};
     const total = stats?.totalTabsEaten ?? 0;
-    const top = stats?.byDomain ?? [];
 
     totalEl.textContent = total;
-    if (!top.length) {
-      listEl.textContent = "";
-      noteEl.textContent = "No history yet. Close a few tabs to build stats.";
-      if (!settings.trackHistory) {
-        noteEl.textContent +=
-          " Website history tracking is disabled, so recommendations use current tabs only.";
-      }
-      return;
-    }
-
-    listEl.textContent = "";
-    top.slice(0, 5).forEach((row) => {
-      const li = document.createElement("li");
-      const domain = document.createElement("span");
-      const count = document.createElement("span");
-      domain.textContent = String(row.domain ?? "");
-      count.textContent = String(row.count ?? 0);
-      li.append(domain, count);
-      listEl.appendChild(li);
-    });
-    noteEl.textContent = "Top domains you've closed recently.";
-    if (!settings.trackHistory) {
-      noteEl.textContent +=
-        " Website history tracking is disabled, so recommendations use current tabs only.";
-    }
+    noteEl.textContent = "Total tabs closed across all time.";
   }
 
   async function runClose(query) {
@@ -419,14 +390,6 @@
         renderSuggestions();
       }
     );
-    bindSettingControl(
-      "track-history",
-      (el) => ({ trackHistory: el.checked }),
-      () => {
-        renderSettingsStats();
-        renderSuggestions();
-      }
-    );
 
     const resetBtn = byId("stats-reset");
     if (resetBtn) {
@@ -478,6 +441,17 @@
     });
     $("#pc-close-active-domain").addEventListener("click", closeActiveDomain);
     $("#pc-undo-close").addEventListener("click", undoLastClose);
+    const closeInactiveBtn = byId("pc-close-inactive");
+    if (closeInactiveBtn) {
+      closeInactiveBtn.addEventListener("click", async () => {
+        closeInactiveBtn.disabled = true;
+        try {
+          await runCloseInactive();
+        } finally {
+          closeInactiveBtn.disabled = false;
+        }
+      });
+    }
     const settingsToggle = byId("pc-settings-toggle");
     if (settingsToggle) {
       settingsToggle.addEventListener("click", () => toggleSettingsPanel());

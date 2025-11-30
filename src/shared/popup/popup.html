@@ -59,6 +59,9 @@
         display: grid;
         gap: 10px;
       }
+      .stack.tight {
+        gap: 6px;
+      }
       .spacer {
         flex: 1;
       }
@@ -103,11 +106,16 @@
       }
       .input {
         width: 100%;
+        flex: 1;
+        min-width: 0;
         padding: 8px 10px;
         border-radius: 8px;
         border: 1px solid var(--border);
         background: var(--bg);
         color: var(--fg);
+      }
+      .row.wrap .input {
+        min-width: 180px;
       }
       .small {
         font-size: 12px;
@@ -131,6 +139,32 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+      }
+      .row.wrap {
+        flex-wrap: wrap;
+      }
+      .status {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(167, 139, 250, 0.08);
+        color: var(--muted);
+        min-height: 22px;
+      }
+      .status:empty {
+        background: transparent;
+        border-color: transparent;
+        min-height: 18px;
+      }
+      .status:not(:empty) {
+        color: var(--fg);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--fg);
+      }
+      .btn.ghost:hover {
+        border-color: var(--accent);
       }
       .tab-panel[hidden] {
         display: none;
@@ -221,21 +255,6 @@
       .row.between {
         justify-content: space-between;
       }
-      .stats-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 6px;
-      }
-      .stats-list li {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: var(--bg);
-      }
     </style>
   </head>
   <body class="stack">
@@ -255,6 +274,9 @@
         <strong>TabEater</strong>
         <div class="spacer"></div>
         <span id="pc-count-pill" class="pill"></span>
+      </div>
+      <div class="muted small">
+        Close noisy tabs fast. Type a keyword or tap a quick action.
       </div>
     </section>
 
@@ -277,7 +299,13 @@
 
       <!-- Quick Close -->
       <section class="card stack">
-        <div class="row">
+        <div class="stack tight">
+          <strong>Close tabs fast</strong>
+          <span class="small muted">
+            Search by keyword or use a quick action below.
+          </span>
+        </div>
+        <div class="row wrap">
           <input
             id="pc-query"
             class="input"
@@ -286,14 +314,17 @@
           />
           <button id="pc-close" class="btn primary">Close</button>
         </div>
-        <div id="pc-status" class="small muted" aria-live="polite"></div>
-        <div class="row small">
-          <button id="pc-close-active-domain" class="btn">
+        <div id="pc-status" class="status small" aria-live="polite"></div>
+        <div class="row wrap small">
+          <button id="pc-close-active-domain" class="btn ghost">
             Close active domain
+          </button>
+          <button id="pc-close-inactive" class="btn ghost">
+            Close inactive
           </button>
           <button
             id="pc-undo-close"
-            class="btn"
+            class="btn ghost"
             disabled
             title="Undo last close"
           >
@@ -363,24 +394,16 @@
       </section>
 
       <section class="card stack">
-        <h2>Stats &amp; Tracking</h2>
-        <div class="grid">
-          <label class="row gap">
-            <input id="track-history" type="checkbox" checked />
-            <span>Track website history for better recommendations</span>
-          </label>
-        </div>
-
+        <h2>Stats</h2>
         <div class="stats">
           <div class="row between stats-meta">
             <div>
               <strong>Total tabs closed:</strong>
               <span id="stats-total">0</span>
             </div>
-            <button id="stats-reset" class="btn danger">Reset stats</button>
+            <button id="stats-reset" class="btn danger">Reset count</button>
           </div>
           <div id="stats-note" class="muted small"></div>
-          <ul id="stats-domains" class="stats-list"></ul>
         </div>
       </section>
 
