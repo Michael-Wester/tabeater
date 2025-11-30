@@ -147,6 +147,7 @@
     const settings = { ...DEFAULTS, ...next };
     applyTheme(settings.theme);
     updateSuggestedVisibility(!!settings.enableSuggestions);
+    toggleQuickVisibility(!!settings.showQuickActions);
     syncSettingsForm(settings);
     if (settings.enableSuggestions) {
       renderSuggestions();
