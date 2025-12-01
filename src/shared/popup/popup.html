@@ -184,15 +184,19 @@
         border: 1px solid var(--border);
         background: rgba(167, 139, 250, 0.08);
         color: var(--muted);
-        min-height: 22px;
+        min-height: 0;
+        display: none;
       }
       .status:empty {
         background: transparent;
         border-color: transparent;
-        min-height: 18px;
+        min-height: 0;
+        padding: 0;
+        display: none;
       }
       .status:not(:empty) {
         color: var(--fg);
+        display: block;
       }
       .btn.ghost {
         background: transparent;
