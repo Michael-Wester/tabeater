@@ -199,6 +199,10 @@
         color: var(--fg);
         border-color: transparent;
       }
+      .btn.ghost.bordered {
+        border-color: var(--border);
+        background: rgba(255, 255, 255, 0.02);
+      }
       .btn.ghost:hover {
         border-color: var(--accent);
       }
@@ -341,11 +345,7 @@
 
       <!-- Quick Close -->
       <section class="card stack" id="pc-quick-card">
-        <div class="stack tight">
-          <strong>Quick actions</strong>
-          <span class="small muted"></span>
-        </div>
-        <div id="pc-quick-body" class="stack">
+        <div class="stack">
           <div class="row wrap" style="margin-bottom: 4px;">
             <input
               id="pc-query"
@@ -357,15 +357,15 @@
           </div>
           <div id="pc-status" class="status small" aria-live="polite"></div>
           <div class="row wrap small" style="margin-top: 0;">
-            <button id="pc-close-active-domain" class="btn ghost">
+            <button id="pc-close-active-domain" class="btn ghost bordered">
               Close active domain
             </button>
-            <button id="pc-close-inactive" class="btn ghost">
+            <button id="pc-close-inactive" class="btn ghost bordered">
               Close inactive
             </button>
             <button
               id="pc-undo-close"
-              class="btn ghost"
+              class="btn ghost bordered"
               disabled
               title="Undo last close"
             >
