@@ -43,9 +43,22 @@
       * {
         box-sizing: border-box;
       }
+      html,
       body {
-        margin: 12px;
-        min-width: 320px;
+        scrollbar-gutter: stable;
+        overflow-y: scroll;
+        scrollbar-width: none;
+      }
+      body::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
+      body {
+        margin: 12px auto;
+        width: 380px;
+        min-width: 380px;
+        max-width: 380px;
+        padding: 10px;
         font: 14px/1.4 system-ui, sans-serif;
         color: var(--fg);
         background: var(--bg);
@@ -55,17 +68,42 @@
         align-items: center;
         gap: 8px;
       }
+      .header-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .header-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .header-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+      }
       .stack {
         display: grid;
         gap: 10px;
+      }
+      .stack.tight {
+        gap: 6px;
+      }
+      .row.tight-bottom {
+        margin-bottom: 4px;
+      }
+      .row.no-top {
+        margin-top: 0;
       }
       .spacer {
         flex: 1;
       }
       .card {
         background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
         padding: 12px;
       }
       .btn {
@@ -75,6 +113,8 @@
         padding: 6px 10px;
         border-radius: 8px;
         cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease,
+          border-color 0.15s ease, transform 0.1s ease;
       }
       .btn.small {
         padding: 4px 8px;
@@ -85,17 +125,41 @@
         color: #fff;
         border-color: transparent;
       }
+      .btn.settings-toggle {
+        padding: 4px 10px;
+        background: transparent;
+        color: var(--muted);
+        transition: background 0.15s ease, color 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .btn.settings-toggle.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
       .btn:disabled {
         opacity: 0.5;
         cursor: default;
       }
+      .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
       .input {
         width: 100%;
+        flex: 1;
+        min-width: 0;
         padding: 8px 10px;
         border-radius: 8px;
         border: 1px solid var(--border);
         background: var(--bg);
         color: var(--fg);
+      }
+      .row.wrap .input {
+        min-width: 180px;
       }
       .small {
         font-size: 12px;
@@ -115,10 +179,76 @@
         background: transparent;
         color: var(--muted);
       }
+      .pill.subtle {
+        background: rgba(167, 139, 250, 0.12);
+        color: var(--fg);
+        border-color: rgba(167, 139, 250, 0.2);
+      }
       .switch {
         display: inline-flex;
         align-items: center;
         gap: 6px;
+      }
+      .row.wrap {
+        flex-wrap: wrap;
+      }
+      .status {
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: rgba(167, 139, 250, 0.08);
+        color: var(--muted);
+        min-height: 0;
+        display: none;
+      }
+      .status:empty {
+        background: transparent;
+        border-color: transparent;
+        min-height: 0;
+        padding: 0;
+        display: none;
+      }
+      .status:not(:empty) {
+        color: var(--fg);
+        display: block;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--fg);
+        border-color: transparent;
+      }
+      .btn.ghost.bordered {
+        border-color: var(--border);
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .btn.ghost:hover {
+        border-color: var(--accent);
+      }
+      .tab-panel[hidden] {
+        display: none;
+      }
+      .tab-panel {
+        width: 100%;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .gap {
+        gap: 8px;
+      }
+      .number,
+      select {
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        width: 120px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 16px;
       }
       .tags {
         display: grid;
@@ -131,19 +261,36 @@
         gap: 6px;
         border-radius: 999px;
         padding: 6px 12px;
-        border: 1px solid var(--border);
-        background: transparent;
+        border: 1px solid rgba(167, 139, 250, 0.25);
+        background: rgba(167, 139, 250, 0.08);
         color: var(--fg);
         cursor: pointer;
         font-size: 13px;
-        transition: background 0.15s ease, border-color 0.15s ease;
+        transition: background 0.15s ease, border-color 0.15s ease,
+          transform 0.1s ease;
         width: 100%;
         justify-content: space-between;
         min-width: 0;
       }
+      .tag-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        flex: 1;
+      }
+      .tag .favicon {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        background: var(--border);
+        border: 1px solid var(--border);
+      }
       .tag:hover {
         border-color: var(--accent);
-        background: rgba(167, 139, 250, 0.1);
+        background: rgba(167, 139, 250, 0.14);
+        transform: translateY(-1px);
       }
       .tag .label {
         overflow: hidden;
@@ -159,52 +306,168 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .btn.danger {
+        border-color: transparent;
+        background: #ef4444;
+        color: #fff;
+      }
+      .stats {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .row.between {
+        justify-content: space-between;
+      }
     </style>
   </head>
   <body class="stack">
     <!-- Header -->
-    <section class="card row">
-      <img src="../icons/icon16.png" class="icon" alt="" />
-      <strong>TabEater</strong>
-      <div class="spacer"></div>
-      <span id="pc-count-pill" class="pill"></span>
-      <button id="pc-open-settings" class="btn small" title="Settings">
-        Settings
-      </button>
-    </section>
-
-    <!-- Recommended -->
-    <section id="pc-suggest-card" class="card stack" hidden>
-      <div class="row">
-        <strong>Recommended</strong>
-        <div class="spacer"></div>
-        <span id="pc-suggest-caption" class="small muted"></span>
-      </div>
-      <div id="pc-suggest-tags" class="tags"></div>
-      <div id="pc-suggest-empty" class="small muted"></div>
-    </section>
-
-    <!-- Quick Close -->
     <section class="card stack">
-      <div class="row">
-        <input
-          id="pc-query"
-          class="input"
-          type="text"
-          placeholder="Close by keyword (press Enter)"
-        />
-        <button id="pc-close" class="btn primary">Close</button>
-      </div>
-      <div id="pc-status" class="small muted" aria-live="polite"></div>
-      <div class="row small">
-        <button id="pc-close-active-domain" class="btn">
-          Close active domain
-        </button>
-        <button id="pc-undo-close" class="btn" disabled title="Undo last close">
-          Undo
-        </button>
+      <div class="header-row">
+        <div class="header-main">
+          <img src="../icons/icon16.png" class="icon" alt="" />
+          <strong>TabEater</strong>
+        </div>
+        <div class="header-actions">
+          <span id="pc-count-pill" class="pill subtle"></span>
+          <button
+            id="pc-settings-toggle"
+            class="btn small settings-toggle"
+            aria-pressed="false"
+            aria-controls="pc-tab-settings"
+            type="button"
+          >
+            Settings
+          </button>
+        </div>
       </div>
     </section>
+
+    <div
+      id="pc-tab-actions"
+      class="tab-panel stack"
+      role="tabpanel"
+      aria-hidden="false"
+    >
+      <!-- Recommended -->
+      <section id="pc-suggest-card" class="card stack" hidden>
+        <div class="row">
+          <strong>Recommended</strong>
+          <div class="spacer"></div>
+          <span id="pc-suggest-caption" class="small muted"></span>
+        </div>
+        <div id="pc-suggest-tags" class="tags"></div>
+        <div id="pc-suggest-empty" class="small muted"></div>
+      </section>
+
+      <!-- Quick Close -->
+      <section class="card stack" id="pc-quick-card">
+        <div class="stack">
+          <div class="row wrap tight-bottom">
+            <input
+              id="pc-query"
+              class="input"
+              type="text"
+              placeholder="Close by keyword (press Enter)"
+            />
+            <button id="pc-close" class="btn primary">Close</button>
+          </div>
+          <div id="pc-status" class="status small" aria-live="polite"></div>
+          <div class="row wrap small no-top">
+            <button id="pc-close-active-domain" class="btn ghost bordered">
+              Close active domain
+            </button>
+            <button id="pc-close-inactive" class="btn ghost bordered">
+              Close inactive
+            </button>
+            <button
+              id="pc-undo-close"
+              class="btn ghost bordered"
+              disabled
+              title="Undo last close"
+            >
+              Undo
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div
+      id="pc-tab-settings"
+      class="tab-panel stack"
+      role="tabpanel"
+      hidden
+      aria-hidden="true"
+    >
+      <section class="card stack">
+        <h2>Settings</h2>
+        <div class="grid">
+          <label class="row gap">
+            <span>Theme</span>
+            <select id="theme">
+              <option value="auto">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+
+          <label class="row gap">
+            <input id="show-quick" type="checkbox" checked />
+            <span>Show quick actions</span>
+          </label>
+
+          <label class="row gap">
+            <input id="enable-suggestions" type="checkbox" checked />
+            <span>Enable recommended actions</span>
+          </label>
+
+          <label class="row gap">
+            <input id="enable-inactive" type="checkbox" checked />
+            <span>Show an inactive tag for idle tabs</span>
+          </label>
+
+          <label class="row gap">
+            <span>Min open tabs per domain</span>
+            <input
+              id="min-open"
+              type="number"
+              min="1"
+              value="3"
+              class="number"
+            />
+          </label>
+
+          <label class="row gap">
+            <span>Inactive after</span>
+            <input
+              id="inactive-threshold"
+              type="number"
+              min="1"
+              value="30"
+              class="number"
+            />
+            <span>minutes</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card stack">
+        <h2>Stats</h2>
+        <div class="stats">
+          <div class="row between stats-meta">
+            <div>
+              <strong>Total tabs closed:</strong>
+              <span id="stats-total">0</span>
+            </div>
+            <button id="stats-reset" class="btn danger">Reset count</button>
+          </div>
+          <div id="stats-note" class="muted small"></div>
+        </div>
+      </section>
+
+    </div>
 
     <script src="popup.js"></script>
   </body>

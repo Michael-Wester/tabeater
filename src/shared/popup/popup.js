@@ -1,7 +1,8 @@
-// Popup: Suggestions react to settings changes; theme + pill react to storage; no deprecated settings left.
+// Popup: Suggestions, stats, and settings live side-by-side with quick actions.
 
 (function () {
-  const $ = (s) => document.querySelector(s);
+  const $ = (selector) => document.querySelector(selector);
+  const byId = (id) => document.getElementById(id);
   const msg = (type, payload) =>
     new Promise((res) =>
       chrome.runtime.sendMessage({ type, ...(payload || {}) }, res)
@@ -15,11 +16,17 @@
     suggestMinOpenTabsPerDomain: 3,
     decayDays: 14,
     maxHistory: 200,
-    trackHistory: true,
-    trackStats: true,
+    showQuickActions: true,
     theme: "auto",
-    showTabsEatenInHeader: true,
   };
+  const FAVICON_SERVICE = "https://icons.duckduckgo.com/ip3/";
+
+  function getFaviconUrl(domain) {
+    if (!domain) return "";
+    const trimmed = String(domain || "").trim().toLowerCase();
+    if (!trimmed) return "";
+    return `${FAVICON_SERVICE}${encodeURIComponent(trimmed)}.ico`;
+  }
 
   let lastClosedTabs = [];
   let statusToken = 0;
@@ -53,51 +60,138 @@
     );
     return { ...DEFAULTS, ...(raw[STORAGE_KEY] || {}) };
   }
+
+  async function writeSettings(patch) {
+    const current = await readSettings();
+    const next = { ...current, ...(patch || {}) };
+    await new Promise((resolve) =>
+      chrome.storage.local.set({ [STORAGE_KEY]: next }, resolve)
+    );
+    applyTheme(next.theme);
+    return next;
+  }
+
+  function syncSettingsForm(settings) {
+    const assign = (id, setter) => {
+      const el = byId(id);
+      if (el) setter(el);
+    };
+
+    assign("theme", (el) => (el.value = settings.theme));
+    assign(
+      "min-open",
+      (el) => (el.value = settings.suggestMinOpenTabsPerDomain)
+    );
+    assign(
+      "enable-suggestions",
+      (el) => (el.checked = !!settings.enableSuggestions)
+    );
+    assign(
+      "enable-inactive",
+      (el) => (el.checked = !!settings.enableInactiveSuggestion)
+    );
+    assign(
+      "inactive-threshold",
+      (el) => (el.value = settings.inactiveThresholdMinutes)
+    );
+    assign("show-quick", (el) => (el.checked = !!settings.showQuickActions));
+  }
+
+  function bindSettingControl(id, map, after) {
+    const el = byId(id);
+    if (!el) return;
+    const handler = async () => {
+      const next = await writeSettings(map(el));
+      if (typeof after === "function") after(next);
+    };
+    el.addEventListener("change", handler);
+  }
+
+  function toggleQuickVisibility(show) {
+    const card = byId("pc-quick-card");
+    const body = byId("pc-quick-body");
+    const control = byId("show-quick");
+    const visible = !!show;
+    if (card) {
+      card.hidden = !visible;
+      card.style.display = visible ? "" : "none";
+      card.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+    if (body) {
+      body.hidden = !visible;
+      body.style.display = visible ? "" : "none";
+      body.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+    if (control) control.checked = visible;
+  }
+
+  let suggestionsRequestToken = 0;
   function updateSuggestedVisibility(enabled) {
     const card = $("#pc-suggest-card");
     if (!card) return;
+    const tags = $("#pc-suggest-tags");
+    const empty = $("#pc-suggest-empty");
+    const caption = $("#pc-suggest-caption");
     card.hidden = !enabled;
     card.style.display = enabled ? "" : "none";
     if (!enabled) {
-      $("#pc-suggest-tags").innerHTML = "";
-      $("#pc-suggest-empty").textContent =
-        "Recommendations disabled. Enable them in Settings to see ideas.";
-      $("#pc-suggest-caption").textContent = "";
+      if (tags) tags.textContent = "";
+      if (empty) {
+        empty.textContent =
+          "Recommendations disabled. Enable them in Settings to see ideas.";
+      }
+      if (caption) caption.textContent = "";
       return;
     }
-    $("#pc-suggest-caption").textContent = "Tap a tag to close matching tabs.";
+    if (caption) {
+      caption.textContent = "Tap a tag to close matching tabs.";
+    }
   }
 
-  // Live reaction to option changes (theme/tabs-eaten visibility/suggestions)
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     const next = changes[STORAGE_KEY]?.newValue;
     if (!next) return;
-    const s = { ...DEFAULTS, ...next };
-    applyTheme(s.theme);
-    $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
-    updateSuggestedVisibility(!!s.enableSuggestions);
-    if (s.enableSuggestions) {
+    const settings = { ...DEFAULTS, ...next };
+    applyTheme(settings.theme);
+    updateSuggestedVisibility(!!settings.enableSuggestions);
+    toggleQuickVisibility(!!settings.showQuickActions);
+    syncSettingsForm(settings);
+    if (settings.enableSuggestions) {
       renderSuggestions();
     }
+    renderSettingsStats();
   });
 
   async function initUI() {
-    const s = await readSettings();
-    applyTheme(s.theme);
-    $("#pc-count-pill").style.display = s.showTabsEatenInHeader ? "" : "none";
-    updateSuggestedVisibility(!!s.enableSuggestions);
-    if (s.enableSuggestions) {
+    const settings = await readSettings();
+    applyTheme(settings.theme);
+    syncSettingsForm(settings);
+    updateSuggestedVisibility(!!settings.enableSuggestions);
+    if (settings.enableSuggestions) {
       $("#pc-suggest-caption").textContent = "Tap a tag to close matching tabs.";
     }
     updateUndoButton();
   }
 
-  // tabs-eaten pill (persistent via background stats)
   async function renderStatsPill() {
     const r = await msg("pc:getStats");
     const total = r?.stats?.totalTabsEaten || 0;
     $("#pc-count-pill").textContent = `${total} closed`;
+  }
+
+  async function renderSettingsStats() {
+    const resetBtn = byId("stats-reset");
+    const totalEl = byId("stats-total");
+    const noteEl = byId("stats-note");
+    if (!totalEl || !noteEl) return;
+
+    if (resetBtn) resetBtn.disabled = false;
+    const { stats } = (await msg("pc:getStats")) || {};
+    const total = stats?.totalTabsEaten ?? 0;
+
+    totalEl.textContent = total;
+    noteEl.textContent = "Total tabs closed across all time.";
   }
 
   async function runClose(query) {
@@ -129,11 +223,7 @@
     if (out?.ok && out.closedCount) {
       setStatus(`Closed ${out.closedCount} inactive`);
       const closed = Array.isArray(out.closedTabs) ? out.closedTabs : [];
-      if (closed.length) {
-        lastClosedTabs = closed;
-      } else {
-        lastClosedTabs = [];
-      }
+      lastClosedTabs = closed.length ? closed : [];
       updateUndoButton();
     } else if (out?.ok) {
       setStatus("No inactive tabs", 1200);
@@ -200,12 +290,18 @@
     tag.type = "button";
     tag.className = "tag";
 
+    const main = document.createElement("span");
+    main.className = "tag-main";
+    const label = document.createElement("span");
+    label.className = "label";
+    const count = document.createElement("span");
+    count.className = "count";
+
     if (item.kind === "inactive") {
       tag.dataset.kind = "inactive";
-      tag.innerHTML = `
-        <span class="label">Inactive</span>
-        <span class="count">${item.inactiveCount}</span>
-      `;
+      label.textContent = "Inactive";
+      main.appendChild(label);
+      count.textContent = String(item.inactiveCount ?? 0);
       tag.addEventListener("click", async () => {
         tag.disabled = true;
         try {
@@ -215,11 +311,25 @@
         }
       });
     } else {
-      tag.dataset.domain = item.domain;
-      tag.innerHTML = `
-        <span class="label">${item.domain}</span>
-        <span class="count">${item.openCount} open</span>
-      `;
+      const domain = String(item.domain || "");
+      tag.dataset.domain = domain;
+      label.textContent = domain;
+      const iconUrl = getFaviconUrl(domain);
+      if (iconUrl) {
+        const icon = document.createElement("img");
+        icon.className = "favicon";
+        icon.alt = "";
+        icon.loading = "lazy";
+        icon.decoding = "async";
+        icon.src = iconUrl;
+        icon.addEventListener("error", () => {
+          icon.hidden = true;
+        });
+        main.appendChild(icon);
+      }
+      main.appendChild(label);
+      const openCount = item.openCount ?? 0;
+      count.textContent = `${openCount} open`;
       tag.addEventListener("click", async () => {
         tag.disabled = true;
         try {
@@ -230,22 +340,26 @@
       });
     }
 
+    tag.append(main, count);
     return tag;
   }
 
   async function renderSuggestions() {
+    const token = ++suggestionsRequestToken;
     const card = $("#pc-suggest-card");
-    if (card.hidden) return;
+    if (!card || card.hidden) return;
 
     const tagsWrap = $("#pc-suggest-tags");
     const empty = $("#pc-suggest-empty");
     const caption = $("#pc-suggest-caption");
+    if (!tagsWrap || !empty || !caption) return;
 
     empty.textContent = "Loading...";
     caption.textContent = "";
-    tagsWrap.innerHTML = "";
+    tagsWrap.textContent = "";
 
     const { ok, suggestions = [] } = await msg("pc:getSuggestions");
+    if (token !== suggestionsRequestToken) return;
     if (!ok) {
       empty.textContent = "Couldn't load recommendations.";
       return;
@@ -260,6 +374,89 @@
     suggestions.forEach((item) => tagsWrap.appendChild(renderSuggestionTag(item)));
   }
 
+  function setupSettingsBindings() {
+    bindSettingControl("theme", (el) => ({ theme: el.value }));
+    bindSettingControl(
+      "min-open",
+      (el) => ({
+        suggestMinOpenTabsPerDomain: Math.max(1, Number(el.value) || 1),
+      }),
+      () => {
+        renderSuggestions();
+      }
+    );
+    bindSettingControl(
+      "enable-suggestions",
+      (el) => ({ enableSuggestions: el.checked }),
+      (next) => {
+        updateSuggestedVisibility(!!next.enableSuggestions);
+        if (next.enableSuggestions) {
+          renderSuggestions();
+        }
+      }
+    );
+    bindSettingControl(
+      "enable-inactive",
+      (el) => ({
+        enableInactiveSuggestion: el.checked,
+      }),
+      () => {
+        renderSuggestions();
+      }
+    );
+    bindSettingControl(
+      "inactive-threshold",
+      (el) => ({
+        inactiveThresholdMinutes: Math.max(1, Number(el.value) || 1),
+      }),
+      () => {
+        renderSuggestions();
+      }
+    );
+    bindSettingControl(
+      "show-quick",
+      (el) => ({ showQuickActions: el.checked }),
+      (next) => toggleQuickVisibility(!!next.showQuickActions)
+    );
+
+    const resetBtn = byId("stats-reset");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", async () => {
+        resetBtn.disabled = true;
+        try {
+          await msg("pc:resetStats");
+        } finally {
+          resetBtn.disabled = false;
+        }
+        await renderSettingsStats();
+        await renderStatsPill();
+      });
+    }
+  }
+
+  function toggleSettingsPanel(show) {
+    const actionsPanel = byId("pc-tab-actions");
+    const settingsPanel = byId("pc-tab-settings");
+    const toggleBtn = byId("pc-settings-toggle");
+    if (!actionsPanel || !settingsPanel || !toggleBtn) return;
+
+    const showSettings =
+      typeof show === "boolean" ? show : settingsPanel.hidden;
+
+    actionsPanel.hidden = showSettings;
+    actionsPanel.setAttribute("aria-hidden", showSettings ? "true" : "false");
+
+    settingsPanel.hidden = !showSettings;
+    settingsPanel.setAttribute("aria-hidden", showSettings ? "false" : "true");
+
+    toggleBtn.classList.toggle("active", showSettings);
+    toggleBtn.setAttribute("aria-pressed", showSettings ? "true" : "false");
+
+    if (showSettings) {
+      renderSettingsStats();
+    }
+  }
+
   function wireUI() {
     $("#pc-close").addEventListener("click", () =>
       runClose($("#pc-query").value.trim())
@@ -272,19 +469,42 @@
     });
     $("#pc-close-active-domain").addEventListener("click", closeActiveDomain);
     $("#pc-undo-close").addEventListener("click", undoLastClose);
-
-    // Open Options
-    $("#pc-open-settings").addEventListener("click", () => {
-      if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
-      else window.open(chrome.runtime.getURL("options/options.html"));
-    });
+    const closeInactiveBtn = byId("pc-close-inactive");
+    if (closeInactiveBtn) {
+      closeInactiveBtn.addEventListener("click", async () => {
+        closeInactiveBtn.disabled = true;
+        try {
+          await runCloseInactive();
+        } finally {
+          closeInactiveBtn.disabled = false;
+        }
+      });
+    }
+    const settingsToggle = byId("pc-settings-toggle");
+    if (settingsToggle) {
+      settingsToggle.addEventListener("click", () => toggleSettingsPanel());
+    }
+    const quickToggle = byId("pc-toggle-quick");
+    const quickBody = byId("pc-quick-body");
+    if (quickToggle && quickBody) {
+      quickToggle.addEventListener("click", () => {
+        const hidden = quickBody.hidden === true;
+        quickBody.hidden = !hidden;
+        quickToggle.textContent = hidden ? "Hide" : "Show";
+        quickToggle.setAttribute("aria-pressed", hidden ? "true" : "false");
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
     await initUI();
     wireUI();
+    setupSettingsBindings();
+    toggleSettingsPanel(false);
     await renderStatsPill();
     await renderSuggestions();
+    await renderSettingsStats();
+    const initial = await readSettings();
+    toggleQuickVisibility(!!initial.showQuickActions);
   });
 })();
-

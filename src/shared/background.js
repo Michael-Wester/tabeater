@@ -3,14 +3,12 @@ const SETTINGS_KEY = "pc.settings";
 const DEFAULTS = {
   enableSuggestions: true,
   enableInactiveSuggestion: true,
-  inactiveThresholdMinutes: 30,
-  suggestMinOpenTabsPerDomain: 3,
+  inactiveThresholdMinutes: 120,
+  suggestMinOpenTabsPerDomain: 1,
   decayDays: 14,
-  maxHistory: 200,
-  trackHistory: true,
-  trackStats: true,
+  maxHistory: 100000,
+  showQuickActions: true,
   theme: "auto",
-  showTabsEatenInHeader: true,
 };
 
 const CONTEXT_MENU_TITLE = "Close all tabs from this domain";
@@ -150,9 +148,7 @@ function installContextMenu() {
       }
     } catch (err) {
       console.warn(
-        `TabEater: context menu create threw (contexts: ${contexts.join(
-          ","
-        )})`,
+        `TabEater: context menu create threw (contexts: ${contexts.join(",")})`,
         err
       );
     }
@@ -250,19 +246,10 @@ async function closeByKeyword(keyword) {
 
   if (toClose.length) {
     await tabsRemove(toClose);
-    const recordClosedTabs = root.pcRecordClosedTabs;
-    if (typeof recordClosedTabs === "function" && closedDomains.size) {
-      try {
-        await recordClosedTabs(Array.from(closedDomains));
-      } catch {}
-    }
     const statsEat = root.pcStatsEat;
     if (typeof statsEat === "function") {
       try {
-        await statsEat({
-          count: toClose.length,
-          domains: Array.from(closedDomains),
-        });
+        await statsEat({ count: toClose.length });
       } catch {}
     }
   }
@@ -306,19 +293,10 @@ async function closeInactiveTabs() {
 
   if (toClose.length) {
     await tabsRemove(toClose);
-    const recordClosedTabs = root.pcRecordClosedTabs;
-    if (typeof recordClosedTabs === "function" && closedDomains.size) {
-      try {
-        await recordClosedTabs(Array.from(closedDomains));
-      } catch {}
-    }
     const statsEat = root.pcStatsEat;
     if (typeof statsEat === "function") {
       try {
-        await statsEat({
-          count: toClose.length,
-          domains: Array.from(closedDomains),
-        });
+        await statsEat({ count: toClose.length });
       } catch {}
     }
   }

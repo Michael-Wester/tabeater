@@ -1,65 +1,42 @@
 # TabEater
 
-Minimal browser extension for taming runaway tab collections.
+Browser extension to close noisy tabs fast and keep your tab list tidy.
 
----
+<img width="911" height="546" alt="image" src="https://github.com/user-attachments/assets/cbb89ca3-851e-4c0a-8a8f-5a78e485d726" />
 
-## Features
+## Highlights
 
-- Close matching tabs by keyword, domain, or in bulk
-- Get suggestions for the next tabs to archive
-- Switch between dark and light themes per browser
-- Track how many tabs you clear over time
-
----
+- Close tabs by keyword or domain; quick actions for inactive domains.
+- Smart recommendations; light/dark theme support.
+- Track total tabs cleared across time.
 
 ## Build
 
-PowerShell script (no Node required):
+PowerShell (no Node needed):
 
 ```powershell
-.\build.ps1             # build all browsers (firefox, chrome, edge)
-.\build.ps1 firefox     # build a single target
+.\build.ps1             # all browsers
+.\build.ps1 firefox     # single target
 ```
 
-Node 18+ workflow (optional for CI/other devs):
+Node 18+ (optional):
 
 ```bash
-node build.js           # build all browsers
-node build.js firefox   # build a single target
+node build.js           # all browsers
+node build.js firefox   # single target
 ```
 
-Artifacts are written to `dist/<browser>/`.
+Outputs land in `dist/<browser>/`.
 
----
+## Install (temporary/dev)
 
-## Project Layout
+- **Firefox:** `about:debugging` → This Firefox → Load Temporary Add-on → `dist/firefox/manifest.json`
+- **Chrome/Chromium:** `chrome://extensions` → Developer mode → Load unpacked → `dist/chrome/`
+
+## Layout
 
 ```
 src/
-  shared/                # all common scripts, UI, and assets
-  overrides/
-    chrome/              # manifest + files that differ for Chrome
-    edge/                # manifest + files that differ for Edge
-    firefox/             # manifest + files that differ for Firefox
+  shared/      # common scripts, UI, assets
+  overrides/   # browser-specific manifest/files (chrome, edge, firefox)
 ```
-
-Override folders are copied on top of the shared build output so each browser only diverges where it needs to.
-
----
-
-## Install (temporary/dev build)
-
-**Firefox**
-
-1. Visit `about:debugging#/runtime/this-firefox`
-2. Choose **Load Temporary Add-on**
-3. Select `dist/firefox/manifest.json`
-
-**Chrome / Chromium**
-
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Choose **Load unpacked** and pick `dist/chrome/`
-
-Add screenshots to `docs/screenshots/` to populate the extension gallery later.
