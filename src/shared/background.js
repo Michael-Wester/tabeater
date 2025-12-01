@@ -3,10 +3,10 @@ const SETTINGS_KEY = "pc.settings";
 const DEFAULTS = {
   enableSuggestions: true,
   enableInactiveSuggestion: true,
-  inactiveThresholdMinutes: 30,
-  suggestMinOpenTabsPerDomain: 3,
+  inactiveThresholdMinutes: 120,
+  suggestMinOpenTabsPerDomain: 1,
   decayDays: 14,
-  maxHistory: 200,
+  maxHistory: 100000,
   showQuickActions: true,
   theme: "auto",
 };
@@ -148,9 +148,7 @@ function installContextMenu() {
       }
     } catch (err) {
       console.warn(
-        `TabEater: context menu create threw (contexts: ${contexts.join(
-          ","
-        )})`,
+        `TabEater: context menu create threw (contexts: ${contexts.join(",")})`,
         err
       );
     }

@@ -47,12 +47,18 @@
       body {
         scrollbar-gutter: stable;
         overflow-y: scroll;
+        scrollbar-width: none;
+      }
+      body::-webkit-scrollbar {
+        width: 0;
+        height: 0;
       }
       body {
         margin: 12px auto;
-        min-width: 320px;
-        max-width: 400px;
-        width: 100%;
+        width: 380px;
+        min-width: 380px;
+        max-width: 380px;
+        padding: 10px;
         font: 14px/1.4 system-ui, sans-serif;
         color: var(--fg);
         background: var(--bg);
@@ -84,6 +90,12 @@
       }
       .stack.tight {
         gap: 6px;
+      }
+      .row.tight-bottom {
+        margin-bottom: 4px;
+      }
+      .row.no-top {
+        margin-top: 0;
       }
       .spacer {
         flex: 1;
@@ -352,7 +364,7 @@
       <!-- Quick Close -->
       <section class="card stack" id="pc-quick-card">
         <div class="stack">
-          <div class="row wrap" style="margin-bottom: 4px;">
+          <div class="row wrap tight-bottom">
             <input
               id="pc-query"
               class="input"
@@ -362,7 +374,7 @@
             <button id="pc-close" class="btn primary">Close</button>
           </div>
           <div id="pc-status" class="status small" aria-live="polite"></div>
-          <div class="row wrap small" style="margin-top: 0;">
+          <div class="row wrap small no-top">
             <button id="pc-close-active-domain" class="btn ghost bordered">
               Close active domain
             </button>
