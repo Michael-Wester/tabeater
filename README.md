@@ -2,6 +2,10 @@
 
 Browser extension to close noisy tabs fast and keep your tab list tidy.
 
+<img width="381" height="357" alt="image" src="https://github.com/user-attachments/assets/0ba91f51-7037-49a0-9f8f-d3dec866023b" />
+
+<img width="384" height="520" alt="image" src="https://github.com/user-attachments/assets/9be1be6d-216a-4ca4-9e45-89695f863eb6" />
+
 ## Highlights
 
 - Close tabs by keyword or domain; quick actions for inactive domains.
