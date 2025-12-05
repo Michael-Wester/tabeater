@@ -21,3 +21,4 @@ venv/
 
 # Ignore manual testing artifacts
 Testing/*.png
+*.zip
