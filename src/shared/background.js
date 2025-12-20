@@ -11,6 +11,19 @@ const DEFAULTS = {
   theme: "auto",
 };
 
+const ACTION_ICON_PATHS = {
+  active: {
+    16: "icons/icon16.png",
+    48: "icons/icon48.png",
+    128: "icons/icon128.png",
+  },
+  inactive: {
+    16: "icons/icon16-inactive.png",
+    48: "icons/icon48-inactive.png",
+    128: "icons/icon128-inactive.png",
+  },
+};
+
 const CONTEXT_MENU_TITLE = "Close all tabs from this domain";
 
 // In MV3 service workers we must pull in helper script manually.
@@ -25,12 +38,33 @@ if (
   }
 }
 
+function getActionApi() {
+  if (typeof chrome !== "undefined") {
+    if (chrome.action) return chrome.action;
+    if (chrome.browserAction) return chrome.browserAction;
+  }
+  if (typeof browser !== "undefined") {
+    if (browser.action) return browser.action;
+    if (browser.browserAction) return browser.browserAction;
+  }
+  return null;
+}
+
 function domainFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
   } catch {
     return null;
   }
+}
+
+function tabLooksInactive(tab, thresholdMs, nowTs) {
+  if (!tab || tab.incognito) return false;
+  if (tab.pinned || tab.audible) return false;
+  if (tab.active) return false;
+  const last = tab.lastAccessed || 0;
+  if (last) return nowTs - last >= thresholdMs;
+  return tab.discarded === true;
 }
 function tabsQuery(q) {
   return new Promise((res) => chrome.tabs.query(q || {}, res));
@@ -47,6 +81,59 @@ function tabsCreate(options) {
     });
   });
 }
+
+let lastIconKind = null;
+let iconRefreshTimer = null;
+async function setActionIcon(kind) {
+  const api = getActionApi();
+  if (!api || typeof api.setIcon !== "function") return;
+  const nextKind = kind === "inactive" ? "inactive" : "active";
+  if (lastIconKind === nextKind) return;
+  const path = ACTION_ICON_PATHS[nextKind];
+  try {
+    const maybePromise = api.setIcon({ path });
+    if (maybePromise && typeof maybePromise.then === "function") {
+      await maybePromise;
+    }
+    lastIconKind = nextKind;
+  } catch (err) {
+    console.warn("TabEater: unable to set action icon", err);
+  }
+}
+
+async function refreshActionIcon() {
+  const api = getActionApi();
+  if (!api || typeof api.setIcon !== "function") return;
+  try {
+    const settings = await getSettings();
+    if (!settings.enableInactiveSuggestion) {
+      await setActionIcon("active");
+      return;
+    }
+    const thresholdMinutes = Math.max(
+      1,
+      Number(settings.inactiveThresholdMinutes) || 30
+    );
+    const thresholdMs = thresholdMinutes * 60000;
+    const nowTs = Date.now();
+    const tabs = await tabsQuery({});
+    const hasInactive = tabs.some((tab) =>
+      tabLooksInactive(tab, thresholdMs, nowTs)
+    );
+    await setActionIcon(hasInactive ? "active" : "inactive");
+  } catch (err) {
+    console.warn("TabEater: icon refresh failed", err);
+  }
+}
+
+function scheduleIconRefresh(delay = 250) {
+  if (iconRefreshTimer) return;
+  iconRefreshTimer = setTimeout(() => {
+    iconRefreshTimer = null;
+    refreshActionIcon();
+  }, delay);
+}
+
 function serializeTab(tab) {
   if (!tab) return null;
   const url = tab.url || tab.pendingUrl || "";
@@ -254,6 +341,7 @@ async function closeByKeyword(keyword) {
     }
   }
 
+  scheduleIconRefresh();
   return {
     closedCount: toClose.length,
     closedDomains: Array.from(closedDomains),
@@ -276,14 +364,7 @@ async function closeInactiveTabs() {
   const closedTabs = [];
 
   for (const tab of tabs) {
-    if (tab.incognito) continue;
-    if (tab.pinned || tab.audible) continue;
-    if (tab.active) continue;
-    const last = tab.lastAccessed || 0;
-    const isInactive = last
-      ? nowTs - last >= thresholdMs
-      : tab.discarded === true;
-    if (!isInactive) continue;
+    if (!tabLooksInactive(tab, thresholdMs, nowTs)) continue;
     toClose.push(tab.id);
     const d = domainFromUrl(tab.url);
     if (d) closedDomains.add(d);
@@ -299,6 +380,7 @@ async function closeInactiveTabs() {
         await statsEat({ count: toClose.length });
       } catch {}
     }
+    scheduleIconRefresh();
   }
 
   return {
@@ -394,6 +476,7 @@ async function restoreTabs(tabs) {
     }
   }
 
+  scheduleIconRefresh();
   return { restoredCount: restored };
 }
 
@@ -430,6 +513,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return undefined;
 });
 
+const tabsApi =
+  (typeof chrome !== "undefined" && chrome.tabs) ||
+  (typeof browser !== "undefined" && browser.tabs);
+if (tabsApi?.onCreated) tabsApi.onCreated.addListener(scheduleIconRefresh);
+if (tabsApi?.onRemoved) tabsApi.onRemoved.addListener(scheduleIconRefresh);
+if (tabsApi?.onActivated) tabsApi.onActivated.addListener(scheduleIconRefresh);
+if (tabsApi?.onUpdated) tabsApi.onUpdated.addListener(scheduleIconRefresh);
+if (tabsApi?.onReplaced) tabsApi.onReplaced.addListener(scheduleIconRefresh);
+
+const storageApi =
+  (typeof chrome !== "undefined" && chrome.storage) ||
+  (typeof browser !== "undefined" && browser.storage);
+if (storageApi?.onChanged) {
+  storageApi.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes?.[SETTINGS_KEY]) {
+      scheduleIconRefresh();
+    }
+  });
+}
+
 const runtimeApi =
   (typeof chrome !== "undefined" && chrome.runtime) ||
   (typeof browser !== "undefined" && browser.runtime) ||
@@ -441,3 +544,4 @@ if (runtimeApi?.onStartup) {
   runtimeApi.onStartup.addListener(installContextMenu);
 }
 installContextMenu();
+refreshActionIcon();

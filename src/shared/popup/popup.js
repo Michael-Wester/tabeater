@@ -19,14 +19,6 @@
     showQuickActions: true,
     theme: "auto",
   };
-  const FAVICON_SERVICE = "https://icons.duckduckgo.com/ip3/";
-
-  function getFaviconUrl(domain) {
-    if (!domain) return "";
-    const trimmed = String(domain || "").trim().toLowerCase();
-    if (!trimmed) return "";
-    return `${FAVICON_SERVICE}${encodeURIComponent(trimmed)}.ico`;
-  }
 
   let lastClosedTabs = [];
   let statusToken = 0;
@@ -299,6 +291,16 @@
 
     if (item.kind === "inactive") {
       tag.dataset.kind = "inactive";
+      const icon = document.createElement("img");
+      icon.className = "favicon";
+      icon.alt = "";
+      icon.loading = "lazy";
+      icon.decoding = "async";
+      icon.src = "../icons/icon16-inactive.png";
+      icon.addEventListener("error", () => {
+        icon.hidden = true;
+      });
+      main.appendChild(icon);
       label.textContent = "Inactive";
       main.appendChild(label);
       count.textContent = String(item.inactiveCount ?? 0);
@@ -314,7 +316,10 @@
       const domain = String(item.domain || "");
       tag.dataset.domain = domain;
       label.textContent = domain;
-      const iconUrl = getFaviconUrl(domain);
+      const iconUrl =
+        typeof item.favIconUrl === "string"
+          ? item.favIconUrl.trim()
+          : "";
       if (iconUrl) {
         const icon = document.createElement("img");
         icon.className = "favicon";
@@ -347,7 +352,7 @@
   async function renderSuggestions() {
     const token = ++suggestionsRequestToken;
     const card = $("#pc-suggest-card");
-    if (!card || card.hidden) return;
+    if (!card || card.getAttribute("aria-hidden") === "true") return;
 
     const tagsWrap = $("#pc-suggest-tags");
     const empty = $("#pc-suggest-empty");
@@ -440,13 +445,14 @@
     const toggleBtn = byId("pc-settings-toggle");
     if (!actionsPanel || !settingsPanel || !toggleBtn) return;
 
+    const settingsActive = settingsPanel.classList.contains("active");
     const showSettings =
-      typeof show === "boolean" ? show : settingsPanel.hidden;
+      typeof show === "boolean" ? show : !settingsActive;
 
-    actionsPanel.hidden = showSettings;
+    actionsPanel.classList.toggle("active", !showSettings);
     actionsPanel.setAttribute("aria-hidden", showSettings ? "true" : "false");
 
-    settingsPanel.hidden = !showSettings;
+    settingsPanel.classList.toggle("active", showSettings);
     settingsPanel.setAttribute("aria-hidden", showSettings ? "false" : "true");
 
     toggleBtn.classList.toggle("active", showSettings);

@@ -51,7 +51,16 @@
       if (t.incognito) continue;
       const d = domainFromUrl(t.url);
       if (!d) continue;
-      openByDomain.set(d, (openByDomain.get(d) || 0) + 1);
+      const existing = openByDomain.get(d) || { openCount: 0, favIconUrl: "" };
+      const tabIcon =
+        typeof t.favIconUrl === "string" && t.favIconUrl.trim()
+          ? t.favIconUrl.trim()
+          : "";
+      const favIconUrl = existing.favIconUrl || tabIcon;
+      openByDomain.set(d, {
+        openCount: existing.openCount + 1,
+        favIconUrl,
+      });
     }
 
     const thresholdMinutes = Math.max(
@@ -75,13 +84,16 @@
     }
 
     const domains = Array.from(openByDomain.entries())
-      .filter(([, openCount]) => openCount >= cfg.suggestMinOpenTabsPerDomain)
-      .sort((a, b) => b[1] - a[1])
+      .filter(
+        ([, info]) => info.openCount >= cfg.suggestMinOpenTabsPerDomain
+      )
+      .sort((a, b) => b[1].openCount - a[1].openCount)
       .slice(0, 10)
-      .map(([domain, openCount]) => ({
+      .map(([domain, info]) => ({
         kind: "domain",
         domain,
-        openCount,
+        openCount: info.openCount,
+        favIconUrl: info.favIconUrl || null,
       }));
 
     const suggestions = [];

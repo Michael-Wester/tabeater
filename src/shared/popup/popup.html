@@ -12,6 +12,8 @@
         --card: #0f1420;
         --border: #1f2937;
         --accent: #a78bfa;
+        --accent-soft: rgba(167, 139, 250, 0.12);
+        --accent-glow: rgba(167, 139, 250, 0.2);
       }
       @media (prefers-color-scheme: light) {
         :root {
@@ -21,6 +23,8 @@
           --card: #f7f7f8;
           --border: #e5e7eb;
           --accent: #7c3aed;
+          --accent-soft: rgba(124, 58, 237, 0.12);
+          --accent-glow: rgba(124, 58, 237, 0.2);
         }
       }
       html[data-theme="light"] {
@@ -30,6 +34,8 @@
         --card: #f7f7f8;
         --border: #e5e7eb;
         --accent: #7c3aed;
+        --accent-soft: rgba(124, 58, 237, 0.12);
+        --accent-glow: rgba(124, 58, 237, 0.2);
       }
       html[data-theme="dark"] {
         --bg: #0b0f16;
@@ -38,6 +44,8 @@
         --card: #0f1420;
         --border: #1f2937;
         --accent: #a78bfa;
+        --accent-soft: rgba(167, 139, 250, 0.12);
+        --accent-glow: rgba(167, 139, 250, 0.2);
       }
 
       * {
@@ -224,15 +232,55 @@
       .btn.ghost:hover {
         border-color: var(--accent);
       }
-      .tab-panel[hidden] {
-        display: none;
-      }
       .tab-panel {
         width: 100%;
+        opacity: 0;
+        transform: translateY(10px);
+        max-height: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .tab-panel.active {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 2000px;
+        pointer-events: auto;
       }
       .grid {
         display: grid;
         gap: 12px;
+      }
+      .settings-grid {
+        gap: 10px;
+      }
+      .setting-row {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: linear-gradient(
+          120deg,
+          rgba(255, 255, 255, 0.02),
+          var(--accent-soft)
+        );
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        transition: border-color 0.15s ease, background 0.15s ease,
+          transform 0.1s ease, box-shadow 0.1s ease;
+      }
+      .setting-row:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      }
+      .setting-row:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+      .setting-label {
+        flex: 1;
+        min-width: 0;
+        font-weight: 600;
       }
       .gap {
         gap: 8px;
@@ -245,6 +293,89 @@
         background: var(--bg);
         color: var(--fg);
         width: 120px;
+      }
+      .checkbox {
+        appearance: none;
+        width: 44px;
+        height: 24px;
+        border-radius: 999px;
+        border: 1.5px solid var(--border);
+        background: var(--border);
+        position: relative;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease,
+          box-shadow 0.12s ease, transform 0.1s ease;
+        flex-shrink: 0;
+      }
+      .checkbox:hover {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      .checkbox:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      .checkbox::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--muted);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        transition: transform 0.15s ease, background 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+      .checkbox:checked::after {
+        transform: translateX(20px);
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+      }
+      .checkbox:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      .counter-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 6px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+      .counter-group:focus-within {
+        border-color: var(--accent);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+          0 0 0 3px var(--accent-soft);
+      }
+      .counter-input {
+        width: 88px;
+        border: none;
+        padding: 6px 8px;
+        background: transparent;
+        color: var(--fg);
+        font-weight: 600;
+        text-align: center;
+      }
+      .counter-input:focus {
+        outline: none;
+      }
+      .counter-input::-webkit-inner-spin-button,
+      .counter-input::-webkit-outer-spin-button {
+        height: 14px;
+        opacity: 0.5;
+      }
+      .counter-input[type="number"] {
+        -moz-appearance: textfield;
+      }
+      .counter-suffix {
+        color: var(--muted);
+        font-size: 12px;
       }
       h2 {
         margin: 0;
@@ -346,7 +477,7 @@
 
     <div
       id="pc-tab-actions"
-      class="tab-panel stack"
+      class="tab-panel stack active"
       role="tabpanel"
       aria-hidden="false"
     >
@@ -398,14 +529,13 @@
       id="pc-tab-settings"
       class="tab-panel stack"
       role="tabpanel"
-      hidden
       aria-hidden="true"
     >
       <section class="card stack">
         <h2>Settings</h2>
-        <div class="grid">
-          <label class="row gap">
-            <span>Theme</span>
+        <div class="grid settings-grid">
+          <label class="row gap setting-row">
+            <span class="setting-label">Theme</span>
             <select id="theme">
               <option value="auto">Auto</option>
               <option value="light">Light</option>
@@ -413,42 +543,51 @@
             </select>
           </label>
 
-          <label class="row gap">
-            <input id="show-quick" type="checkbox" checked />
-            <span>Show quick actions</span>
+          <label class="row gap setting-row">
+            <span class="setting-label">Show quick actions</span>
+            <input id="show-quick" class="checkbox" type="checkbox" checked />
           </label>
 
-          <label class="row gap">
-            <input id="enable-suggestions" type="checkbox" checked />
-            <span>Enable recommended actions</span>
-          </label>
-
-          <label class="row gap">
-            <input id="enable-inactive" type="checkbox" checked />
-            <span>Show an inactive tag for idle tabs</span>
-          </label>
-
-          <label class="row gap">
-            <span>Min open tabs per domain</span>
+          <label class="row gap setting-row">
+            <span class="setting-label">Enable recommended actions</span>
             <input
-              id="min-open"
-              type="number"
-              min="1"
-              value="3"
-              class="number"
+              id="enable-suggestions"
+              class="checkbox"
+              type="checkbox"
+              checked
             />
           </label>
 
-          <label class="row gap">
-            <span>Inactive after</span>
-            <input
-              id="inactive-threshold"
-              type="number"
-              min="1"
-              value="30"
-              class="number"
-            />
-            <span>minutes</span>
+          <label class="row gap setting-row">
+            <span class="setting-label">Show an inactive tag for idle tabs</span>
+            <input id="enable-inactive" class="checkbox" type="checkbox" checked />
+          </label>
+
+          <label class="row gap setting-row">
+            <span class="setting-label">Min open tabs per domain</span>
+            <div class="counter-group">
+              <input
+                id="min-open"
+                type="number"
+                min="1"
+                value="3"
+                class="number counter-input"
+              />
+            </div>
+          </label>
+
+          <label class="row gap setting-row">
+            <span class="setting-label">Inactive after</span>
+            <div class="counter-group">
+              <input
+                id="inactive-threshold"
+                type="number"
+                min="1"
+                value="30"
+                class="number counter-input"
+              />
+              <span class="counter-suffix">minutes</span>
+            </div>
           </label>
         </div>
       </section>
