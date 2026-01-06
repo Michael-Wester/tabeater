@@ -1,15 +1,20 @@
 const root = typeof globalThis !== "undefined" ? globalThis : this;
 const SETTINGS_KEY = "pc.settings";
 const DEFAULTS = {
-  enableSuggestions: true,
   enableInactiveSuggestion: true,
   inactiveThresholdMinutes: 120,
   suggestMinOpenTabsPerDomain: 1,
   decayDays: 14,
   maxHistory: 100000,
   showQuickActions: true,
-  theme: "auto",
+  theme: "light",
 };
+
+function normalizeSettings(raw) {
+  const settings = { ...DEFAULTS, ...(raw || {}) };
+  delete settings.enableSuggestions;
+  return settings;
+}
 
 const ACTION_ICON_PATHS = {
   active: {
@@ -17,14 +22,11 @@ const ACTION_ICON_PATHS = {
     48: "icons/icon48.png",
     128: "icons/icon128.png",
   },
-  inactive: {
-    16: "icons/icon16-inactive.png",
-    48: "icons/icon48-inactive.png",
-    128: "icons/icon128-inactive.png",
-  },
 };
 
-const CONTEXT_MENU_TITLE = "Close all tabs from this domain";
+const CONTEXT_MENU_TITLE = "Close site tabs";
+const CONTEXT_MENU_SORT_TITLE = "Sort tabs (most opened first)";
+const CLOSE_MENU_ID_PAGE = "tabEater-close-site-tabs-page";
 
 // In MV3 service workers we must pull in helper script manually.
 if (
@@ -81,21 +83,32 @@ function tabsCreate(options) {
     });
   });
 }
+function tabsMove(id, index) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.move(id, { index }, (tab) => {
+      const err = getRuntimeLastError();
+      if (err) reject(err);
+      else resolve(tab);
+    });
+  });
+}
+
+// Context menu helpers
 
 let lastIconKind = null;
 let iconRefreshTimer = null;
-async function setActionIcon(kind) {
+let contextMenuClickBound = false;
+async function setActionIcon() {
   const api = getActionApi();
   if (!api || typeof api.setIcon !== "function") return;
-  const nextKind = kind === "inactive" ? "inactive" : "active";
-  if (lastIconKind === nextKind) return;
-  const path = ACTION_ICON_PATHS[nextKind];
+  if (lastIconKind === "active") return;
+  const path = ACTION_ICON_PATHS.active;
   try {
     const maybePromise = api.setIcon({ path });
     if (maybePromise && typeof maybePromise.then === "function") {
       await maybePromise;
     }
-    lastIconKind = nextKind;
+    lastIconKind = "active";
   } catch (err) {
     console.warn("TabEater: unable to set action icon", err);
   }
@@ -105,22 +118,7 @@ async function refreshActionIcon() {
   const api = getActionApi();
   if (!api || typeof api.setIcon !== "function") return;
   try {
-    const settings = await getSettings();
-    if (!settings.enableInactiveSuggestion) {
-      await setActionIcon("active");
-      return;
-    }
-    const thresholdMinutes = Math.max(
-      1,
-      Number(settings.inactiveThresholdMinutes) || 30
-    );
-    const thresholdMs = thresholdMinutes * 60000;
-    const nowTs = Date.now();
-    const tabs = await tabsQuery({});
-    const hasInactive = tabs.some((tab) =>
-      tabLooksInactive(tab, thresholdMs, nowTs)
-    );
-    await setActionIcon(hasInactive ? "active" : "inactive");
+    await setActionIcon();
   } catch (err) {
     console.warn("TabEater: icon refresh failed", err);
   }
@@ -201,13 +199,13 @@ function installContextMenu() {
     (typeof browser !== "undefined" && (browser.contextMenus || browser.menus));
   if (!menus || typeof menus.create !== "function") return;
 
-  const createEntry = (contexts) => {
+  const createEntry = (title, contexts, id) => {
     try {
       const maybePromise = menus.create(
         {
-          title: CONTEXT_MENU_TITLE,
+          id,
+          title,
           contexts,
-          onclick: handleContextMenuClick,
         },
         () => {
           const err = getRuntimeLastError();
@@ -222,7 +220,7 @@ function installContextMenu() {
         }
       );
       if (maybePromise && typeof maybePromise.then === "function") {
-        maybePromise.catch((err) => {
+        return maybePromise.catch((err) => {
           if (err) {
             console.warn(
               `TabEater: context menu create promise failed (contexts: ${contexts.join(
@@ -231,30 +229,65 @@ function installContextMenu() {
               err
             );
           }
+          return null;
         });
       }
+      // Synchronous ID return path.
+      return maybePromise;
     } catch (err) {
       console.warn(
         `TabEater: context menu create threw (contexts: ${contexts.join(",")})`,
         err
       );
     }
+    return null;
   };
 
-  const contextsToAdd = [["page", "frame"]];
-  if (chrome?.action) contextsToAdd.push(["action"]);
-  if (chrome?.browserAction) contextsToAdd.push(["browser_action"]);
-  if (typeof browser !== "undefined" && browser.browserAction) {
-    contextsToAdd.push(["browser_action"]);
-  }
+  const tabContext =
+    (menus.ContextType && (menus.ContextType.TAB || menus.ContextType.tab)) ||
+    "tab";
+  const supportsTabContext =
+    !!(menus.ContextType && (menus.ContextType.TAB || menus.ContextType.tab)) ||
+    (typeof browser !== "undefined" && (browser.contextMenus || browser.menus));
+  const baseContexts = [
+    "page",
+    "selection",
+    "link",
+    "editable",
+    "image",
+    "video",
+    "audio",
+  ];
+  const contextsToAdd = [
+    {
+      id: CLOSE_MENU_ID_PAGE,
+      contexts: supportsTabContext
+        ? [...baseContexts, tabContext]
+        : baseContexts,
+    },
+  ];
+  const sortContexts = [];
 
   const runCreate = () => {
-    const seen = new Set();
-    contextsToAdd.forEach((ctx) => {
+    contextsToAdd.forEach((entry) => {
+      createEntry(CONTEXT_MENU_TITLE, entry.contexts, entry.id);
+    });
+    const seenSort = new Set();
+    sortContexts.forEach((ctx) => {
       const key = ctx.join(",");
-      if (seen.has(key)) return;
-      seen.add(key);
-      createEntry(ctx);
+      if (seenSort.has(key)) return;
+      // Only register contexts supported in this browser.
+      const ctxName = ctx[0];
+      if (ctxName === "action" && !chrome?.action && !browser?.action) return;
+      if (
+        ctxName === "browser_action" &&
+        !chrome?.browserAction &&
+        !(typeof browser !== "undefined" && browser.browserAction)
+      ) {
+        return;
+      }
+      seenSort.add(key);
+      createEntry(CONTEXT_MENU_SORT_TITLE, ctx, CONTEXT_MENU_SORT_TITLE);
     });
   };
 
@@ -284,12 +317,32 @@ function installContextMenu() {
   } else {
     runCreate();
   }
+
+  if (
+    !contextMenuClickBound &&
+    menus.onClicked &&
+    typeof menus.onClicked.addListener === "function"
+  ) {
+    menus.onClicked.addListener((info, tab) => {
+      if (info?.menuItemId === CLOSE_MENU_ID_PAGE) {
+        handleContextMenuClick(info, tab);
+        return;
+      }
+      if (info?.menuItemId === CONTEXT_MENU_SORT_TITLE) {
+        sortTabsByOpenCount().catch((err) => {
+          console.error("TabEater: context sort failed", err);
+        });
+      }
+    });
+    contextMenuClickBound = true;
+  }
+
 }
 
 function getSettings() {
   return new Promise((res) => {
     chrome.storage.local.get(SETTINGS_KEY, (raw) => {
-      res({ ...DEFAULTS, ...(raw?.[SETTINGS_KEY] || {}) });
+      res(normalizeSettings(raw?.[SETTINGS_KEY]));
     });
   });
 }
@@ -370,6 +423,56 @@ async function closeInactiveTabs() {
     if (d) closedDomains.add(d);
     const snapshot = serializeTab(tab);
     if (snapshot) closedTabs.push(snapshot);
+  }
+
+  if (toClose.length) {
+    await tabsRemove(toClose);
+    const statsEat = root.pcStatsEat;
+    if (typeof statsEat === "function") {
+      try {
+        await statsEat({ count: toClose.length });
+      } catch {}
+    }
+    scheduleIconRefresh();
+  }
+
+  return {
+    closedCount: toClose.length,
+    closedDomains: Array.from(closedDomains),
+    closedTabs,
+  };
+}
+
+function normalizeUrlForDedup(url) {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function closeDuplicateTabs() {
+  const tabs = await tabsQuery({});
+  const seen = new Set();
+  const toClose = [];
+  const closedDomains = new Set();
+  const closedTabs = [];
+
+  for (const tab of tabs) {
+    if (tab.incognito || tab.pinned) continue;
+    const key = normalizeUrlForDedup(tab.url || tab.pendingUrl || "");
+    if (!key) continue;
+    if (seen.has(key)) {
+      toClose.push(tab.id);
+      const d = domainFromUrl(tab.url);
+      if (d) closedDomains.add(d);
+      const snapshot = serializeTab(tab);
+      if (snapshot) closedTabs.push(snapshot);
+    } else {
+      seen.add(key);
+    }
   }
 
   if (toClose.length) {
@@ -480,12 +583,77 @@ async function restoreTabs(tabs) {
   return { restoredCount: restored };
 }
 
+async function sortTabsByOpenCount() {
+  const tabs = await tabsQuery({ currentWindow: true });
+  if (!Array.isArray(tabs) || tabs.length <= 1) return { sortedCount: 0 };
+
+  const ordered = [...tabs].sort((a, b) => (a.index || 0) - (b.index || 0));
+  const domainCounts = new Map();
+  const movable = [];
+  let pinnedCount = 0;
+
+  for (const tab of ordered) {
+    const domain = domainFromUrl(tab.url) || "";
+    domainCounts.set(domain, (domainCounts.get(domain) || 0) + 1);
+    if (tab.pinned) {
+      pinnedCount += 1;
+      continue;
+    }
+    movable.push({
+      tabId: tab.id,
+      domain,
+      originalIndex: typeof tab.index === "number" ? tab.index : Number.MAX_SAFE_INTEGER,
+    });
+  }
+
+  if (movable.length <= 1) return { sortedCount: 0 };
+
+  movable.sort((a, b) => {
+    const countDiff =
+      (domainCounts.get(b.domain) || 0) - (domainCounts.get(a.domain) || 0);
+    if (countDiff !== 0) return countDiff;
+    if (!a.domain && b.domain) return 1;
+    if (a.domain && !b.domain) return -1;
+    const cmp = (a.domain || "").localeCompare(b.domain || "");
+    if (cmp !== 0) return cmp;
+    return a.originalIndex - b.originalIndex;
+  });
+
+  let moved = 0;
+  for (let i = 0; i < movable.length; i += 1) {
+    const targetIndex = pinnedCount + i;
+    const tabId = movable[i].tabId;
+    if (typeof tabId !== "number") continue;
+    try {
+      await tabsMove(tabId, targetIndex);
+      moved += 1;
+    } catch (err) {
+      console.warn("TabEater: sort move failed", err);
+    }
+  }
+
+  return { sortedCount: moved };
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || !msg.type) return;
 
   if (msg.type === "pc:closeByKeyword" && msg.query) {
     (async () => {
       sendResponse({ ok: true, ...(await closeByKeyword(msg.query)) });
+    })();
+    return true;
+  }
+
+  if (msg.type === "pc:sortTabsByOpenCount") {
+    (async () => {
+      try {
+        const result = await sortTabsByOpenCount();
+        sendResponse({ ok: true, ...result });
+      } catch (err) {
+        console.error("TabEater: sortTabsByOpenCount failed", err);
+        sendResponse({ ok: false });
+      }
     })();
     return true;
   }
@@ -504,6 +672,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         sendResponse({ ok: true, ...result });
       } catch (err) {
         console.error("TabEater: restoreTabs failed", err);
+        sendResponse({ ok: false });
+      }
+    })();
+    return true;
+  }
+
+  if (msg.type === "pc:closeDuplicates") {
+    (async () => {
+      try {
+        const result = await closeDuplicateTabs();
+        sendResponse({ ok: true, ...result });
+      } catch (err) {
+        console.error("TabEater: closeDuplicateTabs failed", err);
         sendResponse({ ok: false });
       }
     })();

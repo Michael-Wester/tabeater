@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="auto">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <title>TabEater</title>
@@ -225,6 +225,13 @@
         color: var(--fg);
         border-color: transparent;
       }
+      .btn.icon-btn {
+        padding: 4px 8px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
       .btn.ghost.bordered {
         border-color: var(--border);
         background: rgba(255, 255, 255, 0.02);
@@ -239,29 +246,27 @@
         max-height: 0;
         overflow: hidden;
         pointer-events: none;
+        display: none;
       }
       .tab-panel.active {
         opacity: 1;
         transform: translateY(0);
         max-height: 2000px;
         pointer-events: auto;
+        display: grid;
       }
       .grid {
         display: grid;
         gap: 12px;
       }
       .settings-grid {
-        gap: 10px;
+        gap: 8px;
       }
       .setting-row {
-        padding: 10px 12px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: linear-gradient(
-          120deg,
-          rgba(255, 255, 255, 0.02),
-          var(--accent-soft)
-        );
+        padding: 6px 10px;
+        border: 1px solid rgba(167, 139, 250, 0.25);
+        border-radius: 10px;
+        background: rgba(167, 139, 250, 0.08);
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
@@ -271,16 +276,67 @@
       .setting-row:hover {
         border-color: var(--accent);
         transform: translateY(-1px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        background: rgba(167, 139, 250, 0.12);
       }
       .setting-row:focus-within {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-glow);
+        box-shadow: 0 0 0 2px var(--accent-glow);
       }
       .setting-label {
         flex: 1;
         min-width: 0;
         font-weight: 600;
+        font-size: 12px;
+      }
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px;
+        border: 1px solid rgba(167, 139, 250, 0.25);
+        border-radius: 999px;
+        background: rgba(167, 139, 250, 0.08);
+      }
+      .theme-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .theme-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .theme-option svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        shape-rendering: geometricPrecision;
+        vector-effect: non-scaling-stroke;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .theme-label {
+        line-height: 1;
+      }
+      .theme-option.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        box-shadow: none;
+      }
+      .theme-option:not(.active):hover {
+        border-color: var(--accent);
+        color: var(--fg);
+        background: rgba(167, 139, 250, 0.12);
       }
       .gap {
         gap: 8px;
@@ -341,52 +397,58 @@
       .counter-group {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 6px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.02);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        gap: 4px;
+        padding: 2px 6px;
+        border: 1px solid rgba(167, 139, 250, 0.25);
+        border-radius: 999px;
+        background: rgba(167, 139, 250, 0.08);
       }
       .counter-group:focus-within {
         border-color: var(--accent);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
-          0 0 0 3px var(--accent-soft);
+        box-shadow: 0 0 0 2px var(--accent-soft);
       }
       .counter-input {
-        width: 88px;
+        width: 64px;
         border: none;
-        padding: 6px 8px;
+        padding: 4px 6px;
         background: transparent;
         color: var(--fg);
         font-weight: 600;
         text-align: center;
+        font-size: 12px;
       }
       .counter-input:focus {
         outline: none;
       }
-      .counter-input::-webkit-inner-spin-button,
-      .counter-input::-webkit-outer-spin-button {
-        height: 14px;
-        opacity: 0.5;
+      .counter-input::-webkit-inner-spin_button,
+      .counter-input::-webkit-outer-spin-button,
+      .number::-webkit-inner-spin-button,
+      .number::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
       }
       .counter-input[type="number"] {
         -moz-appearance: textfield;
       }
       .counter-suffix {
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
       }
       h2 {
         margin: 0;
-        font-size: 16px;
+        font-size: 14px;
       }
-      .tags {
+      .chips {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 8px;
       }
-      .tag {
+      .chips-more {
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .chip {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -403,14 +465,14 @@
         justify-content: space-between;
         min-width: 0;
       }
-      .tag-main {
+      .chip-main {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         min-width: 0;
         flex: 1;
       }
-      .tag .favicon {
+      .chip .favicon {
         width: 16px;
         height: 16px;
         border-radius: 4px;
@@ -418,22 +480,22 @@
         background: var(--border);
         border: 1px solid var(--border);
       }
-      .tag:hover {
+      .chip:hover {
         border-color: var(--accent);
         background: rgba(167, 139, 250, 0.14);
         transform: translateY(-1px);
       }
-      .tag .label {
+      .chip .label {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
         flex: 1;
       }
-      .tag .count {
+      .chip .count {
         flex-shrink: 0;
       }
-      .tag .count {
+      .chip .count {
         font-size: 12px;
         color: var(--muted);
       }
@@ -450,6 +512,19 @@
       .row.between {
         justify-content: space-between;
       }
+      .caption-inline {
+        margin-left: 8px;
+      }
+      .undo-icon {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+      }
+      .undo-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
     </style>
   </head>
   <body class="stack">
@@ -461,6 +536,7 @@
           <strong>TabEater</strong>
         </div>
         <div class="header-actions">
+          <span id="pc-open-count" class="pill"></span>
           <span id="pc-count-pill" class="pill subtle"></span>
           <button
             id="pc-settings-toggle"
@@ -481,15 +557,16 @@
       role="tabpanel"
       aria-hidden="false"
     >
-      <!-- Recommended -->
-      <section id="pc-suggest-card" class="card stack" hidden>
+      <!-- Suggestion chips -->
+      <section id="pc-suggest-card" class="card stack">
         <div class="row">
-          <strong>Recommended</strong>
+          <strong>Suggestions</strong>
           <div class="spacer"></div>
           <span id="pc-suggest-caption" class="small muted"></span>
         </div>
-        <div id="pc-suggest-tags" class="tags"></div>
+        <div id="pc-suggest-chips" class="chips"></div>
         <div id="pc-suggest-empty" class="small muted"></div>
+        <div id="pc-suggest-more" class="chips-more small"></div>
       </section>
 
       <!-- Quick Close -->
@@ -504,23 +581,36 @@
             />
             <button id="pc-close" class="btn primary">Close</button>
           </div>
-          <div id="pc-status" class="status small" aria-live="polite"></div>
           <div class="row wrap small no-top">
-            <button id="pc-close-active-domain" class="btn ghost bordered">
-              Close active domain
+            <button id="pc-sort-tabs-quick" class="btn ghost bordered">
+              Sort tabs
             </button>
-            <button id="pc-close-inactive" class="btn ghost bordered">
-              Close inactive
+            <button id="pc-close-duplicates" class="btn ghost bordered">
+              Close duplicates
             </button>
+            <div class="spacer"></div>
             <button
               id="pc-undo-close"
-              class="btn ghost bordered"
+              class="btn ghost bordered undo-btn"
               disabled
               title="Undo last close"
             >
-              Undo
+              <span class="undo-label">Undo</span>
+              <svg
+                class="undo-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 5L4 10l5 5"></path>
+                <path d="M5 10h7.5a5.5 5.5 0 110 11H12"></path>
+              </svg>
             </button>
           </div>
+          <div id="pc-status" class="status small" aria-live="polite"></div>
         </div>
       </section>
     </div>
@@ -534,34 +624,40 @@
       <section class="card stack">
         <h2>Settings</h2>
         <div class="grid settings-grid">
-          <label class="row gap setting-row">
+          <div class="row gap setting-row">
             <span class="setting-label">Theme</span>
-            <select id="theme">
-              <option value="auto">Auto</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-
-          <label class="row gap setting-row">
-            <span class="setting-label">Show quick actions</span>
-            <input id="show-quick" class="checkbox" type="checkbox" checked />
-          </label>
-
-          <label class="row gap setting-row">
-            <span class="setting-label">Enable recommended actions</span>
-            <input
-              id="enable-suggestions"
-              class="checkbox"
-              type="checkbox"
-              checked
-            />
-          </label>
-
-          <label class="row gap setting-row">
-            <span class="setting-label">Show an inactive tag for idle tabs</span>
-            <input id="enable-inactive" class="checkbox" type="checkbox" checked />
-          </label>
+            <div class="theme-toggle" role="group" aria-label="Theme">
+              <button
+                type="button"
+                class="btn small theme-option"
+                data-theme-value="light"
+                aria-pressed="false"
+              >
+                <span class="theme-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="4.5"></circle>
+                    <path
+                      d="M12 2.25v3.1M12 18.65v3.1M2.25 12h3.1M18.65 12h3.1M5.3 5.3l2.2 2.2M16.5 16.5l2.2 2.2M5.3 18.7l2.2-2.2M16.5 7.5l2.2-2.2"
+                    ></path>
+                  </svg>
+                </span>
+                <span class="theme-label">Light</span>
+              </button>
+              <button
+                type="button"
+                class="btn small theme-option"
+                data-theme-value="dark"
+                aria-pressed="false"
+              >
+                <span class="theme-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path>
+                  </svg>
+                </span>
+                <span class="theme-label">Dark</span>
+              </button>
+            </div>
+          </div>
 
           <label class="row gap setting-row">
             <span class="setting-label">Min open tabs per domain</span>
@@ -589,20 +685,7 @@
               <span class="counter-suffix">minutes</span>
             </div>
           </label>
-        </div>
-      </section>
 
-      <section class="card stack">
-        <h2>Stats</h2>
-        <div class="stats">
-          <div class="row between stats-meta">
-            <div>
-              <strong>Total tabs closed:</strong>
-              <span id="stats-total">0</span>
-            </div>
-            <button id="stats-reset" class="btn danger">Reset count</button>
-          </div>
-          <div id="stats-note" class="muted small"></div>
         </div>
       </section>
 

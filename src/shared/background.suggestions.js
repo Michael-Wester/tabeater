@@ -7,14 +7,19 @@
   };
 
   const DEFAULTS = {
-    enableSuggestions: true,
     enableInactiveSuggestion: true,
     inactiveThresholdMinutes: 60,
     suggestMinOpenTabsPerDomain: 1,
     decayDays: 14,
     maxHistory: 200,
     showQuickActions: true,
-    theme: "auto",
+    theme: "light",
+  };
+
+  const normalizeSettings = (raw) => {
+    const settings = { ...DEFAULTS, ...(raw || {}) };
+    delete settings.enableSuggestions;
+    return settings;
   };
 
   const now = () => Date.now();
@@ -32,18 +37,17 @@
 
   async function getSettings() {
     const got = await getStore([KEYS.SETTINGS]);
-    return { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
+    return normalizeSettings(got[KEYS.SETTINGS]);
   }
   async function updateSettings(patch) {
     const cur = await getSettings();
-    const next = { ...cur, ...(patch || {}) };
+    const next = normalizeSettings({ ...cur, ...(patch || {}) });
     await setStore({ [KEYS.SETTINGS]: next });
   }
 
   async function pcGetSuggestions() {
     const got = await getStore([KEYS.SETTINGS]);
-    const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
-    if (!cfg.enableSuggestions) return [];
+    const cfg = normalizeSettings(got[KEYS.SETTINGS]);
 
     const tabs = await new Promise((res) => chrome.tabs.query({}, res));
     const openByDomain = new Map();
@@ -88,7 +92,7 @@
         ([, info]) => info.openCount >= cfg.suggestMinOpenTabsPerDomain
       )
       .sort((a, b) => b[1].openCount - a[1].openCount)
-      .slice(0, 10)
+      .slice(0, 30)
       .map(([domain, info]) => ({
         kind: "domain",
         domain,
