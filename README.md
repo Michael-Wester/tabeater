@@ -9,7 +9,7 @@ Browser extension to close noisy tabs fast and keep your tab list tidy.
 
 - Close tabs by keyword or exact domain, with suggestions for busy sites.
 - One-click cleanup for inactive tabs, duplicates, and domain-heavy windows.
-- Undo the last close, track total tabs eaten, and toggle light/dark themes.
+- Undo the last close, track total tabs closed, and toggle light/dark themes.
 - Context menu entry to close tabs for the current site.
 
 ## Usage
