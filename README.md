@@ -6,9 +6,17 @@ Browser extension to close noisy tabs fast and keep your tab list tidy.
 
 ## Highlights
 
-- Close tabs by keyword or domain; quick actions for inactive domains.
-- Smart recommendations; light/dark theme support.
-- Track total tabs cleared across time.
+- Close tabs by keyword or exact domain, with suggestions for busy sites.
+- One-click cleanup for inactive tabs, duplicates, and domain-heavy windows.
+- Undo the last close, track total tabs eaten, and toggle light/dark themes.
+- Context menu entry to close tabs for the current site.
+
+## Usage
+
+- Open the popup, type a keyword or domain, then press Enter or click Close.
+- Tap a suggestion chip to close tabs for that site (or inactive tabs).
+- Use quick actions to sort tabs, close duplicates, or undo the last close.
+- Adjust the minimum tab count for suggestions and the inactive threshold in Settings.
 
 ## Build
 
@@ -30,8 +38,9 @@ Outputs land in `dist/<browser>/`.
 
 ## Install (temporary/dev)
 
-- **Firefox:** `about:debugging` → This Firefox → Load Temporary Add-on → `dist/firefox/manifest.json`
-- **Chrome/Chromium:** `chrome://extensions` → Developer mode → Load unpacked → `dist/chrome/`
+- **Firefox:** `about:debugging` -> This Firefox -> Load Temporary Add-on -> `dist/firefox/manifest.json`
+- **Chrome/Chromium:** `chrome://extensions` -> Developer mode -> Load unpacked -> `dist/chrome/`
+- **Edge:** `edge://extensions` -> Developer mode -> Load unpacked -> `dist/edge/`
 
 ## Layout
 
