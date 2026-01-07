@@ -7,14 +7,19 @@
   };
 
   const DEFAULTS = {
-    enableSuggestions: true,
     enableInactiveSuggestion: true,
     inactiveThresholdMinutes: 60,
     suggestMinOpenTabsPerDomain: 1,
     decayDays: 14,
     maxHistory: 200,
     showQuickActions: true,
-    theme: "auto",
+    theme: "light",
+  };
+
+  const normalizeSettings = (raw) => {
+    const settings = { ...DEFAULTS, ...(raw || {}) };
+    delete settings.enableSuggestions;
+    return settings;
   };
 
   const now = () => Date.now();
@@ -32,18 +37,17 @@
 
   async function getSettings() {
     const got = await getStore([KEYS.SETTINGS]);
-    return { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
+    return normalizeSettings(got[KEYS.SETTINGS]);
   }
   async function updateSettings(patch) {
     const cur = await getSettings();
-    const next = { ...cur, ...(patch || {}) };
+    const next = normalizeSettings({ ...cur, ...(patch || {}) });
     await setStore({ [KEYS.SETTINGS]: next });
   }
 
   async function pcGetSuggestions() {
     const got = await getStore([KEYS.SETTINGS]);
-    const cfg = { ...DEFAULTS, ...(got[KEYS.SETTINGS] || {}) };
-    if (!cfg.enableSuggestions) return [];
+    const cfg = normalizeSettings(got[KEYS.SETTINGS]);
 
     const tabs = await new Promise((res) => chrome.tabs.query({}, res));
     const openByDomain = new Map();
@@ -51,7 +55,16 @@
       if (t.incognito) continue;
       const d = domainFromUrl(t.url);
       if (!d) continue;
-      openByDomain.set(d, (openByDomain.get(d) || 0) + 1);
+      const existing = openByDomain.get(d) || { openCount: 0, favIconUrl: "" };
+      const tabIcon =
+        typeof t.favIconUrl === "string" && t.favIconUrl.trim()
+          ? t.favIconUrl.trim()
+          : "";
+      const favIconUrl = existing.favIconUrl || tabIcon;
+      openByDomain.set(d, {
+        openCount: existing.openCount + 1,
+        favIconUrl,
+      });
     }
 
     const thresholdMinutes = Math.max(
@@ -75,13 +88,16 @@
     }
 
     const domains = Array.from(openByDomain.entries())
-      .filter(([, openCount]) => openCount >= cfg.suggestMinOpenTabsPerDomain)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([domain, openCount]) => ({
+      .filter(
+        ([, info]) => info.openCount >= cfg.suggestMinOpenTabsPerDomain
+      )
+      .sort((a, b) => b[1].openCount - a[1].openCount)
+      .slice(0, 30)
+      .map(([domain, info]) => ({
         kind: "domain",
         domain,
-        openCount,
+        openCount: info.openCount,
+        favIconUrl: info.favIconUrl || null,
       }));
 
     const suggestions = [];
